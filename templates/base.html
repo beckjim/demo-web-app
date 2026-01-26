@@ -7,28 +7,22 @@
   <title>Employee Dialogue - 2025 (demo)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sanitize.css@13.0.0/sanitize.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&display=swap');
-
     :root {
-      --bg: #0b1a1f;
-      --bg-2: #0f2a32;
-      --card: #0f172a;
-      --card-border: rgba(255, 255, 255, 0.06);
-      --text: #e5f2f6;
-      --muted: #9cb7c3;
-      --accent: #5dd3c4;
-      --accent-2: #69a9ff;
-      --danger: #f97373;
-      --shadow: 0 20px 50px rgba(5, 12, 20, 0.45);
-      --radius: 14px;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #6b7280;
+      --accent: #0f766e;
+      --accent-2: #0ea5e9;
+      --danger: #e11d48;
+      --border: #e5e7eb;
+      --shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
+      --radius: 12px;
     }
 
     body {
-      font-family: 'Manrope', 'Segoe UI', sans-serif;
-      background: radial-gradient(120% 120% at 10% 10%, rgba(93, 211, 196, 0.14), transparent),
-        radial-gradient(120% 120% at 90% 20%, rgba(105, 169, 255, 0.16), transparent),
-        radial-gradient(120% 120% at 50% 70%, rgba(255, 255, 255, 0.06), transparent),
-        linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%);
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
       color: var(--text);
       margin: 0;
       padding: 0;
@@ -36,11 +30,9 @@
     }
 
     header {
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 18px 24px;
+      background: var(--accent);
+      color: #fff;
+      padding: 16px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -49,38 +41,36 @@
 
     main {
       max-width: 1040px;
-      margin: 32px auto;
+      margin: 28px auto;
       padding: 0 16px 48px;
     }
 
     .card {
-      background: linear-gradient(165deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.00));
-      border: 1px solid var(--card-border);
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 22px;
-      margin-bottom: 18px;
+      padding: 20px;
+      margin-bottom: 16px;
     }
 
     h1 {
       margin: 0 0 6px;
-      font-size: 24px;
-      letter-spacing: 0.2px;
+      font-size: 22px;
     }
 
     h2 {
-      margin: 0 0 14px;
-      font-size: 19px;
-      letter-spacing: 0.2px;
+      margin: 0 0 12px;
+      font-size: 18px;
     }
 
     form {
       display: grid;
-      gap: 14px;
+      gap: 12px;
     }
 
     label {
-      font-weight: 700;
+      font-weight: 600;
       font-size: 14px;
       color: var(--text);
     }
@@ -88,21 +78,19 @@
     input,
     textarea {
       width: 100%;
-      padding: 11px 12px;
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
       font-size: 14px;
-      background: rgba(255, 255, 255, 0.02);
+      background: #fff;
       color: var(--text);
-      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
     }
 
     input:focus,
     textarea:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(93, 211, 196, 0.2);
-      background: rgba(255, 255, 255, 0.04);
+      box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2);
     }
 
     textarea {
@@ -111,16 +99,14 @@
     }
 
     fieldset {
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
     }
 
     legend {
-      font-weight: 800;
+      font-weight: 700;
       padding: 0 6px;
-      color: var(--muted);
-      letter-spacing: 0.3px;
     }
 
     .radio-row {
@@ -141,14 +127,10 @@
       font-weight: 600;
       text-align: center;
       white-space: normal;
-      padding: 8px 10px;
-      border-radius: 10px;
+      padding: 6px 8px;
+      border-radius: 8px;
       border: 1px solid transparent;
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .radio-option input {
-      accent-color: var(--accent);
+      background: #f9fafb;
     }
 
     .ability-grid {
@@ -161,16 +143,16 @@
       align-items: center;
       flex-wrap: nowrap;
       gap: 12px;
-      padding: 10px 12px;
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.02);
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f9fafb;
     }
 
     .ability-label {
       font-weight: 700;
       min-width: 220px;
-      color: var(--muted);
+      color: var(--text);
     }
 
     .ability-row .radio-option {
@@ -180,7 +162,7 @@
 
     .actions {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
       flex-wrap: wrap;
     }
@@ -188,8 +170,8 @@
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-weight: 700;
+      gap: 10px;
+      font-weight: 600;
     }
 
     .header-actions span {
@@ -203,30 +185,29 @@
 
     button,
     .button-link {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: #06141b;
+      background: var(--accent);
+      color: #fff;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 10px 14px;
       font-size: 14px;
-      font-weight: 800;
+      font-weight: 700;
       cursor: pointer;
       text-decoration: none;
       display: inline-block;
-      box-shadow: 0 10px 24px rgba(105, 169, 255, 0.25);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
       transition: transform 0.08s ease, box-shadow 0.12s ease;
     }
 
     button:hover,
     .button-link:hover {
       transform: translateY(-1px);
-      box-shadow: 0 14px 28px rgba(105, 169, 255, 0.32);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.16);
     }
 
     button.secondary,
     .button-link.secondary {
-      background: linear-gradient(135deg, #fda4af, #f87171);
-      color: #2d0f12;
+      background: var(--danger);
     }
 
     button.text {
@@ -244,31 +225,31 @@
     }
 
     ul.flash li {
-      padding: 12px 14px;
-      border-radius: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
       margin-bottom: 8px;
-      border: 1px solid var(--card-border);
-      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      background: #fff;
     }
 
     ul.flash li.success {
-      background: rgba(93, 211, 196, 0.08);
-      color: #b6fff1;
-      border-color: rgba(93, 211, 196, 0.25);
+      background: #ecfdf3;
+      color: #065f46;
+      border: 1px solid #bbf7d0;
     }
 
     ul.flash li.error {
-      background: rgba(249, 115, 115, 0.08);
-      color: #ffd6d6;
-      border-color: rgba(249, 115, 115, 0.25);
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecdd3;
     }
 
     .entry {
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 14px;
+      padding: 12px;
       margin-bottom: 12px;
-      background: rgba(255, 255, 255, 0.02);
+      background: #fff;
     }
 
     .entry h3 {
@@ -284,7 +265,7 @@
     .tabs {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .tab-list {
@@ -294,23 +275,23 @@
     }
 
     .tab-button {
-      background: rgba(255, 255, 255, 0.04);
+      background: #fff;
       color: var(--text);
-      border: 1px solid var(--card-border);
+      border: 1px solid var(--border);
       padding: 10px 14px;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
-      font-weight: 700;
+      font-weight: 600;
       transition: all 0.15s ease;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
     }
 
     .tab-button[aria-selected="true"],
     .tab-button.active {
-      background: linear-gradient(135deg, rgba(93, 211, 196, 0.18), rgba(105, 169, 255, 0.22));
-      color: #031216;
-      border-color: rgba(93, 211, 196, 0.45);
-      box-shadow: 0 14px 30px rgba(105, 169, 255, 0.28);
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.14);
     }
 
     .tab-panels {

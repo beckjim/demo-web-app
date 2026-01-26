@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - app-data:/app/instance
+    environment:
+      - FLASK_APP=app
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - AZURE_AD_CLIENT_SECRET=${AZURE_AD_CLIENT_SECRET}
+    restart: unless-stopped
+
+volumes:
+  app-data:

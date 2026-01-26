@@ -2,14 +2,15 @@
 
 import os
 import uuid
-from functools import wraps
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash, session
-from sqlalchemy import or_, func
-from flask_sqlalchemy import SQLAlchemy
-from dotenv import load_dotenv
+from functools import wraps
+
 import msal
 import requests
+from dotenv import load_dotenv
+from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 
 load_dotenv()
 
@@ -43,7 +44,7 @@ ABILITY_CHOICES = [
 ]
 
 
-class Entry(database.Model):  # pylint: disable=too-few-public-methods
+class Entry(database.Model):
     """Simple submission entry model."""
 
     id = database.Column(database.Integer, primary_key=True)
@@ -61,7 +62,7 @@ class Entry(database.Model):  # pylint: disable=too-few-public-methods
     )
 
 
-class FinalEntry(database.Model):  # pylint: disable=too-few-public-methods
+class FinalEntry(database.Model):
     """Manager-owned final assessment linked to an employee's self assessment."""
 
     id = database.Column(database.Integer, primary_key=True)
@@ -107,7 +108,8 @@ with app.app_context():
         for col_name, col_type, default_val in add_cols:
             if col_name not in existing_cols:
                 cursor.execute(
-                    f"ALTER TABLE entry ADD COLUMN {col_name} {col_type} NOT NULL DEFAULT {default_val}"
+                    "ALTER TABLE entry ADD COLUMN "
+                    f"{col_name} {col_type} NOT NULL DEFAULT {default_val}"
                 )
 
         if drop_message:

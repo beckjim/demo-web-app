@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="tabs" data-tab-root>
+  <div class="tab-list" role="tablist" aria-label="Self assessment tabs">
+    <button class="tab-button active" aria-controls="tab-self" data-tab-target="tab-self">Your Self Assessment</button>
+    <button class="tab-button" aria-controls="tab-managed" data-tab-target="tab-managed">Managed Self
+      Assessments</button>
+    <button class="tab-button" aria-controls="tab-final" data-tab-target="tab-final">Final Assessments</button>
+  </div>
+  <div class="tab-panels">
+    <section id="tab-self" class="card tab-panel">
+      <h2>Your Self Assessment</h2>
+      {% if not has_own_entry %}
+      <div class="actions" style="margin-bottom: 10px;">
+        <a class="button-link" href="{{ url_for('new_entry') }}">Create Self Assessment</a>
+      </div>
+      {% endif %}
+      {% if own_entries %}
+      {% for entry in own_entries %}
+      <div class="entry">
+        <h3>{{ entry.name }}</h3>
+        <small>{{ entry.email }} — {{ entry.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        {% if entry.manager_name %}
+        <div class="summary"><strong>Manager:</strong> {{ entry.manager_name }}</div>
+        {% endif %}
+        <div class="summary">
+          <div><strong>Objective rating:</strong> {{ entry.objective_rating }}</div>
+          <div><strong>Objective comments:</strong> {{ entry.objective_comment }}</div>
+          <div><strong>Abilities:</strong>
+            <ul>
+              <li>Technical/functional skills: {{ entry.technical_rating }}</li>
+              <li>Project management: {{ entry.project_rating }}</li>
+              <li>Methodology/processes competencies: {{ entry.methodology_rating }}</li>
+            </ul>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="button-link" href="{{ url_for('edit_entry', entry_id=entry.id) }}">Edit</a>
+          <form method="post" action="{{ url_for('delete_entry', entry_id=entry.id) }}"
+            onsubmit="return confirm('Delete this entry?');">
+            <button class="secondary" type="submit">Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p>No self assessment yet.</p>
+      {% endif %}
+    </section>
+
+    <section id="tab-managed" class="card tab-panel">
+      <h2>Managed Self Assessments</h2>
+      {% if managed_entries %}
+      {% for entry in managed_entries %}
+      <div class="entry">
+        <h3>{{ entry.name }}</h3>
+        <small>{{ entry.email }} — {{ entry.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        {% if entry.manager_name %}
+        <div class="summary"><strong>Manager:</strong> {{ entry.manager_name }}</div>
+        {% endif %}
+        <div class="summary">
+          <div><strong>Objective rating:</strong> {{ entry.objective_rating }}</div>
+          <div><strong>Objective comments:</strong> {{ entry.objective_comment }}</div>
+          <div><strong>Abilities:</strong>
+            <ul>
+              <li>Technical/functional skills: {{ entry.technical_rating }}</li>
+              <li>Project management: {{ entry.project_rating }}</li>
+              <li>Methodology/processes competencies: {{ entry.methodology_rating }}</li>
+            </ul>
+          </div>
+        </div>
+        <div class="actions">
+          {% if final_lookup.get(entry.id) %}
+          <a class="button-link" href="{{ url_for('edit_final_entry', final_id=final_lookup[entry.id].id) }}">Edit
+            Final Assessment</a>
+          {% else %}
+          <form method="post" action="{{ url_for('finalize_entry', entry_id=entry.id) }}">
+            <button type="submit">Create Final Assessment</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p>No managed self assessments.</p>
+      {% endif %}
+    </section>
+
+    <section id="tab-final" class="card tab-panel">
+      <h2>Final Assessments</h2>
+      {% if final_entries %}
+      {% for entry in final_entries %}
+      <div class="entry">
+        <h3>{{ entry.name }}</h3>
+        <small>{{ entry.email }} — Finalized {{ entry.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        {% if entry.manager_name %}
+        <div class="summary"><strong>Manager:</strong> {{ entry.manager_name }}</div>
+        {% endif %}
+        <div class="summary">
+          <div><strong>Objective rating:</strong> {{ entry.objective_rating }}</div>
+          <div><strong>Objective comments:</strong> {{ entry.objective_comment }}</div>
+          <div><strong>Abilities:</strong>
+            <ul>
+              <li>Technical/functional skills: {{ entry.technical_rating }}</li>
+              <li>Project management: {{ entry.project_rating }}</li>
+              <li>Methodology/processes competencies: {{ entry.methodology_rating }}</li>
+            </ul>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="button-link" href="{{ url_for('edit_final_entry', final_id=entry.id) }}">Edit Final Assessment</a>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p>No final assessments yet.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

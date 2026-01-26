@@ -1,0 +1,23 @@
+[project]
+name = "demo-web-app"
+version = "0.1.0"
+description = "Flask form demo with SQLite backend"
+authors = [{ name = "Your Name" }]
+requires-python = ">=3.9"
+dependencies = [
+    "Flask==3.0.2",
+    "Flask-SQLAlchemy==3.1.1",
+    "msal==1.29.0",
+    "python-dotenv==1.0.1",
+    "requests==2.32.3",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["app"]
+
+[tool.uv]
+package = true

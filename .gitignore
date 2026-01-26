@@ -1,0 +1,37 @@
+# Environment and secrets
+.env
+.env.*
+.venv/
+venv/
+env/
+
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+
+# Packaging / build outputs
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Tool caches and reports
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Local data and databases
+app.db
+instance/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

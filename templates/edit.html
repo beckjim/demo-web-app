@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Edit Self Assessment</h2>
+    <form method="post" action="{{ url_for('edit_entry', entry_id=entry.id) }}">
+        <div>
+            <label for="name">Name</label>
+            <input id="name" name="name" value="{{ entry.name }}" readonly required>
+        </div>
+        <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" value="{{ entry.email }}" readonly required>
+        </div>
+        <div>
+            <label for="manager_name">Manager</label>
+            <input id="manager_name" name="manager_name" value="{{ entry.manager_name }}" readonly>
+        </div>
+        <fieldset>
+            <legend>Assessment of Objectives *</legend>
+            <p>Please evaluate below your performance on your objectives for the reference period.</p>
+            <p>Implement activities defined in the EUROfusion job description.</p>
+            <div class="radio-row">
+                {% for choice in objective_choices %}
+                <label class="radio-option">
+                    <input type="radio" name="objective_rating" value="{{ choice }}" {% if
+                        entry.objective_rating==choice %}checked{% endif %} required>
+                    <span>{{ choice }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div>
+                <label for="objective_comment">Comments to the assessment of Objectives *</label>
+                <textarea id="objective_comment" name="objective_comment"
+                    required>{{ entry.objective_comment }}</textarea>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend>Abilities *</legend>
+            <p>Please rate each criterion. Choose N/A if not applicable.</p>
+            <div class="ability-grid">
+                <div class="ability-row">
+                    <div class="ability-label">Technical/functional skills</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="technical_rating" value="{{ choice }}" {% if
+                            entry.technical_rating==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="ability-row">
+                    <div class="ability-label">Project management</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="project_rating" value="{{ choice }}" {% if
+                            entry.project_rating==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="ability-row">
+                    <div class="ability-label">Methodology/processes competencies</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="methodology_rating" value="{{ choice }}" {% if
+                            entry.methodology_rating==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </fieldset>
+        <div class="actions">
+            <button type="submit">Save Changes</button>
+            <a class="button-link" href="{{ url_for('index') }}">Back to Self Assessments</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

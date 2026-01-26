@@ -31,6 +31,7 @@
                     {% endfor %}
                 </div>
             </div>
+            <div style="height: 1rem;"></div>
             <div>
                 <label class="comment-label" for="objective_comment">Comments to the assessment of Objectives *</label>
                 <p>Mandatory in all cases, base your comments on the goals of the previous year. If you selected
@@ -121,7 +122,7 @@
                     {% endfor %}
                 </div>
             </div>
-            <div style="height: 1rem;"></div>
+
             <div>
                 <label class="comment-label" for="efficiency_comment">In case you selected "Exceeds expectations" on the
                     efficiency question
@@ -167,14 +168,6 @@
                     </label>
                     {% endfor %}
                 </div>
-            </div>
-            <div style="height: 1rem;"></div>
-            <div>
-                <label class="comment-label" for="conduct_comment">In case you selected "Exceeds expectations" on the
-                    conduct question
-                    above, justify your choice. *</label>
-                <p>If there are no comments or justification, please write N/A (not applicable).</p>
-                <textarea id="conduct_comment" name="conduct_comment" required>{{ entry.conduct_comment }}</textarea>
             </div>
         </fieldset>
 

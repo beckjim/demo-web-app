@@ -65,6 +65,7 @@ class Entry(database.Model):
     conduct_proactivity = database.Column(database.String(40), nullable=False, default="")
     conduct_leadership = database.Column(database.String(40), nullable=False, default="")
     conduct_comment = database.Column(database.Text, nullable=False, default="")
+    general_comments = database.Column(database.Text, nullable=False, default="")
     created_at = database.Column(database.DateTime, default=datetime.utcnow)
     updated_at = database.Column(
         database.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -475,10 +476,6 @@ def edit_entry(entry_id):
         efficiency_ownership = request.form.get("efficiency_ownership", "").strip()
         efficiency_resourcefulness = request.form.get("efficiency_resourcefulness", "").strip()
         efficiency_comment = request.form.get("efficiency_comment", "").strip()
-        conduct_mutual_trust = request.form.get("conduct_mutual_trust", "").strip()
-        conduct_proactivity = request.form.get("conduct_proactivity", "").strip()
-        conduct_leadership = request.form.get("conduct_leadership", "").strip()
-        conduct_comment = request.form.get("conduct_comment", "").strip()
         conduct_mutual_trust = request.form.get("conduct_mutual_trust", "").strip()
         conduct_proactivity = request.form.get("conduct_proactivity", "").strip()
         conduct_leadership = request.form.get("conduct_leadership", "").strip()

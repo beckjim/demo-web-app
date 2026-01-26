@@ -43,5 +43,17 @@ App will start on http://127.0.0.1:5000.
 - SQLite database stored at app.db in project root
 - Microsoft 365 sign-in required for form access
 
+## Testing
+The application includes comprehensive unit tests. See [TESTING.md](TESTING.md) for details.
+
+Quick start:
+```bash
+# Install test dependencies
+uv sync --extra dev
+
+# Run tests
+uv run pytest
+```
+
 ## Notes
 - `SECRET_KEY` in app.py is for local use; set a secure value in production.

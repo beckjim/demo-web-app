@@ -32,7 +32,7 @@
                 </div>
             </div>
             <div>
-                <label for="objective_comment">Comments to the assessment of Objectives *</label>
+                <label class="comment-label" for="objective_comment">Comments to the assessment of Objectives *</label>
                 <p>Mandatory in all cases, base your comments on the goals of the previous year. If you selected
                     "Exceeded objective", justify the choice.</p>
                 <textarea id="objective_comment" name="objective_comment"
@@ -75,7 +75,119 @@
                     {% endfor %}
                 </div>
             </div>
+            <div>
+                <label class="comment-label" for="abilities_comment">In case you selected "Exceeds expectations" on the
+                    abilities question
+                    above, justify your choice. *</label>
+                <p>If there are no comments or justification, please write N/A (not applicable).
+                </p>
+                <textarea id="abilities_comment" name="abilities_comment"
+                    required>{{ entry.abilities_comment }}</textarea>
+            </div>
         </fieldset>
+        <fieldset>
+            <legend>Efficiency *</legend>
+            <p>Please provide a rating for each criteria. If a competency is not relevant for the position select N/A
+                (not applicable).</p>
+            <div class="ability-grid">
+                <div class="ability-row">
+                    <div class="ability-label">Collaboration</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="efficiency_collaboration" value="{{ choice }}" {% if
+                            entry.efficiency_collaboration==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="ability-row">
+                    <div class="ability-label">Ownership</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="efficiency_ownership" value="{{ choice }}" {% if
+                            entry.efficiency_ownership==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="ability-row">
+                    <div class="ability-label">Resourcefulness</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="efficiency_resourcefulness" value="{{ choice }}" {% if
+                            entry.efficiency_resourcefulness==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div style="height: 1rem;"></div>
+            <div>
+                <label class="comment-label" for="efficiency_comment">In case you selected "Exceeds expectations" on the
+                    efficiency question
+                    above, justify your choice. *</label>
+                <p>If there are no comments or justification, please write N/A (not applicable).</p>
+                <textarea id="efficiency_comment" name="efficiency_comment"
+                    required>{{ entry.efficiency_comment }}</textarea>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Conduct in the service *</legend>
+            <p>Please provide a rating for each criteria/competency. If the Leadership competency is not relevant for
+                the position select N/A (not applicable).</p>
+            <div class="ability-grid">
+                <div class="ability-row">
+                    <div class="ability-label">Mutual trust and respect</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="conduct_mutual_trust" value="{{ choice }}" {% if
+                            entry.conduct_mutual_trust==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="ability-row">
+                    <div class="ability-label">Proactivity</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="conduct_proactivity" value="{{ choice }}" {% if
+                            entry.conduct_proactivity==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="ability-row">
+                    <div class="ability-label">Leadership</div>
+                    {% for choice in ability_choices %}
+                    <label class="radio-option">
+                        <input type="radio" name="conduct_leadership" value="{{ choice }}" {% if
+                            entry.conduct_leadership==choice %}checked{% endif %} required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div style="height: 1rem;"></div>
+            <div>
+                <label class="comment-label" for="conduct_comment">In case you selected "Exceeds expectations" on the
+                    conduct question
+                    above, justify your choice. *</label>
+                <p>If there are no comments or justification, please write N/A (not applicable).</p>
+                <textarea id="conduct_comment" name="conduct_comment" required>{{ entry.conduct_comment }}</textarea>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>General Comments from employee *</legend>
+            <p>Anything the employee would like to add to the above including any feedback/suggestions to your
+                manager(s)? In case you have wishes for potential training or changes in working conditions, please
+                address them in this section</p>
+            <div>
+                <textarea id="general_comments" name="general_comments" required>{{ entry.general_comments }}</textarea>
+            </div>
+        </fieldset>
+
         <div class="actions">
             <button type="submit">Save Changes</button>
             <a class="button-link" href="{{ url_for('index') }}">Back to Self Assessments</a>

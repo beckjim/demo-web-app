@@ -56,6 +56,15 @@ class Entry(database.Model):
     technical_rating = database.Column(database.String(40), nullable=False)
     project_rating = database.Column(database.String(40), nullable=False)
     methodology_rating = database.Column(database.String(40), nullable=False)
+    abilities_comment = database.Column(database.Text, nullable=False, default="")
+    efficiency_collaboration = database.Column(database.String(40), nullable=False, default="")
+    efficiency_ownership = database.Column(database.String(40), nullable=False, default="")
+    efficiency_resourcefulness = database.Column(database.String(40), nullable=False, default="")
+    efficiency_comment = database.Column(database.Text, nullable=False, default="")
+    conduct_mutual_trust = database.Column(database.String(40), nullable=False, default="")
+    conduct_proactivity = database.Column(database.String(40), nullable=False, default="")
+    conduct_leadership = database.Column(database.String(40), nullable=False, default="")
+    conduct_comment = database.Column(database.Text, nullable=False, default="")
     created_at = database.Column(database.DateTime, default=datetime.utcnow)
     updated_at = database.Column(
         database.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -75,6 +84,16 @@ class FinalEntry(database.Model):
     technical_rating = database.Column(database.String(40), nullable=False)
     project_rating = database.Column(database.String(40), nullable=False)
     methodology_rating = database.Column(database.String(40), nullable=False)
+    abilities_comment = database.Column(database.Text, nullable=False, default="")
+    efficiency_collaboration = database.Column(database.String(40), nullable=False, default="")
+    efficiency_ownership = database.Column(database.String(40), nullable=False, default="")
+    efficiency_resourcefulness = database.Column(database.String(40), nullable=False, default="")
+    efficiency_comment = database.Column(database.Text, nullable=False, default="")
+    conduct_mutual_trust = database.Column(database.String(40), nullable=False, default="")
+    conduct_proactivity = database.Column(database.String(40), nullable=False, default="")
+    conduct_leadership = database.Column(database.String(40), nullable=False, default="")
+    conduct_comment = database.Column(database.Text, nullable=False, default="")
+    general_comments = database.Column(database.Text, nullable=False, default="")
     created_at = database.Column(database.DateTime, default=datetime.utcnow)
     updated_at = database.Column(
         database.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -104,11 +123,42 @@ with app.app_context():
             ("technical_rating", "TEXT", "''"),
             ("project_rating", "TEXT", "''"),
             ("methodology_rating", "TEXT", "''"),
+            ("abilities_comment", "TEXT", "''"),
+            ("efficiency_collaboration", "TEXT", "''"),
+            ("efficiency_ownership", "TEXT", "''"),
+            ("efficiency_resourcefulness", "TEXT", "''"),
+            ("efficiency_comment", "TEXT", "''"),
+            ("conduct_mutual_trust", "TEXT", "''"),
+            ("conduct_proactivity", "TEXT", "''"),
+            ("conduct_leadership", "TEXT", "''"),
+            ("conduct_comment", "TEXT", "''"),
+            ("general_comments", "TEXT", "''"),
         ]
         for col_name, col_type, default_val in add_cols:
             if col_name not in existing_cols:
                 cursor.execute(
                     "ALTER TABLE entry ADD COLUMN "
+                    f"{col_name} {col_type} NOT NULL DEFAULT {default_val}"
+                )
+
+        cursor.execute("PRAGMA table_info(final_entry)")
+        final_existing_cols = {row[1] for row in cursor.fetchall()}
+        final_add_cols = [
+            ("abilities_comment", "TEXT", "''"),
+            ("efficiency_collaboration", "TEXT", "''"),
+            ("efficiency_ownership", "TEXT", "''"),
+            ("efficiency_resourcefulness", "TEXT", "''"),
+            ("efficiency_comment", "TEXT", "''"),
+            ("conduct_mutual_trust", "TEXT", "''"),
+            ("conduct_proactivity", "TEXT", "''"),
+            ("conduct_leadership", "TEXT", "''"),
+            ("conduct_comment", "TEXT", "''"),
+            ("general_comments", "TEXT", "''"),
+        ]
+        for col_name, col_type, default_val in final_add_cols:
+            if col_name not in final_existing_cols:
+                cursor.execute(
+                    "ALTER TABLE final_entry ADD COLUMN "
                     f"{col_name} {col_type} NOT NULL DEFAULT {default_val}"
                 )
 
@@ -308,16 +358,48 @@ def create_entry():
     technical_rating = request.form.get("technical_rating", "").strip()
     project_rating = request.form.get("project_rating", "").strip()
     methodology_rating = request.form.get("methodology_rating", "").strip()
+    abilities_comment = request.form.get("abilities_comment", "").strip()
+    efficiency_collaboration = request.form.get("efficiency_collaboration", "").strip()
+    efficiency_ownership = request.form.get("efficiency_ownership", "").strip()
+    efficiency_resourcefulness = request.form.get("efficiency_resourcefulness", "").strip()
+    efficiency_comment = request.form.get("efficiency_comment", "").strip()
+    conduct_mutual_trust = request.form.get("conduct_mutual_trust", "").strip()
+    conduct_proactivity = request.form.get("conduct_proactivity", "").strip()
+    conduct_leadership = request.form.get("conduct_leadership", "").strip()
+    conduct_comment = request.form.get("conduct_comment", "").strip()
+    general_comments = request.form.get("general_comments", "").strip()
 
     base_missing = not name or not email
     objective_missing = not objective_rating or not objective_comment
     abilities_missing = (
-        not technical_rating or not project_rating or not methodology_rating
+        not technical_rating
+        or not project_rating
+        or not methodology_rating
+        or not abilities_comment
+        or not efficiency_collaboration
+        or not efficiency_ownership
+        or not efficiency_resourcefulness
+        or not efficiency_comment
+        or not conduct_mutual_trust
+        or not conduct_proactivity
+        or not conduct_leadership
+        or not conduct_comment
+        or not general_comments
     )
     objective_invalid = not _validate_choice(objective_rating, OBJECTIVE_CHOICES)
     abilities_invalid = not all(
         _validate_choice(val, ABILITY_CHOICES)
-        for val in (technical_rating, project_rating, methodology_rating)
+        for val in (
+            technical_rating,
+            project_rating,
+            methodology_rating,
+            efficiency_collaboration,
+            efficiency_ownership,
+            efficiency_resourcefulness,
+            conduct_mutual_trust,
+            conduct_proactivity,
+            conduct_leadership,
+        )
     )
 
     if (
@@ -351,6 +433,16 @@ def create_entry():
         technical_rating=technical_rating,
         project_rating=project_rating,
         methodology_rating=methodology_rating,
+        abilities_comment=abilities_comment,
+        efficiency_collaboration=efficiency_collaboration,
+        efficiency_ownership=efficiency_ownership,
+        efficiency_resourcefulness=efficiency_resourcefulness,
+        efficiency_comment=efficiency_comment,
+        conduct_mutual_trust=conduct_mutual_trust,
+        conduct_proactivity=conduct_proactivity,
+        conduct_leadership=conduct_leadership,
+        conduct_comment=conduct_comment,
+        general_comments=general_comments,
     )
     database.session.add(entry)
     database.session.commit()
@@ -378,15 +470,50 @@ def edit_entry(entry_id):
         technical_rating = request.form.get("technical_rating", "").strip()
         project_rating = request.form.get("project_rating", "").strip()
         methodology_rating = request.form.get("methodology_rating", "").strip()
+        abilities_comment = request.form.get("abilities_comment", "").strip()
+        efficiency_collaboration = request.form.get("efficiency_collaboration", "").strip()
+        efficiency_ownership = request.form.get("efficiency_ownership", "").strip()
+        efficiency_resourcefulness = request.form.get("efficiency_resourcefulness", "").strip()
+        efficiency_comment = request.form.get("efficiency_comment", "").strip()
+        conduct_mutual_trust = request.form.get("conduct_mutual_trust", "").strip()
+        conduct_proactivity = request.form.get("conduct_proactivity", "").strip()
+        conduct_leadership = request.form.get("conduct_leadership", "").strip()
+        conduct_comment = request.form.get("conduct_comment", "").strip()
+        conduct_mutual_trust = request.form.get("conduct_mutual_trust", "").strip()
+        conduct_proactivity = request.form.get("conduct_proactivity", "").strip()
+        conduct_leadership = request.form.get("conduct_leadership", "").strip()
+        conduct_comment = request.form.get("conduct_comment", "").strip()
+        general_comments = request.form.get("general_comments", "").strip()
 
         objective_missing = not objective_rating or not objective_comment
         abilities_missing = (
-            not technical_rating or not project_rating or not methodology_rating
+            not technical_rating
+            or not project_rating
+            or not methodology_rating
+            or not abilities_comment
+            or not efficiency_collaboration
+            or not efficiency_ownership
+            or not efficiency_resourcefulness
+            or not efficiency_comment
+            or not conduct_mutual_trust
+            or not conduct_proactivity
+            or not conduct_leadership
+            or not conduct_comment
         )
         objective_invalid = not _validate_choice(objective_rating, OBJECTIVE_CHOICES)
         abilities_invalid = not all(
             _validate_choice(val, ABILITY_CHOICES)
-            for val in (technical_rating, project_rating, methodology_rating)
+            for val in (
+                technical_rating,
+                project_rating,
+                methodology_rating,
+                efficiency_collaboration,
+                efficiency_ownership,
+                efficiency_resourcefulness,
+                conduct_mutual_trust,
+                conduct_proactivity,
+                conduct_leadership,
+            )
         )
 
         if (
@@ -406,6 +533,16 @@ def edit_entry(entry_id):
         entry.technical_rating = technical_rating
         entry.project_rating = project_rating
         entry.methodology_rating = methodology_rating
+        entry.abilities_comment = abilities_comment
+        entry.efficiency_collaboration = efficiency_collaboration
+        entry.efficiency_ownership = efficiency_ownership
+        entry.efficiency_resourcefulness = efficiency_resourcefulness
+        entry.efficiency_comment = efficiency_comment
+        entry.conduct_mutual_trust = conduct_mutual_trust
+        entry.conduct_proactivity = conduct_proactivity
+        entry.conduct_leadership = conduct_leadership
+        entry.conduct_comment = conduct_comment
+        entry.general_comments = general_comments
         database.session.commit()
         flash("Entry updated", "success")
         return redirect(url_for("index"))
@@ -459,6 +596,16 @@ def finalize_entry(entry_id):
         technical_rating=entry.technical_rating,
         project_rating=entry.project_rating,
         methodology_rating=entry.methodology_rating,
+        abilities_comment=entry.abilities_comment,
+        efficiency_collaboration=entry.efficiency_collaboration,
+        efficiency_ownership=entry.efficiency_ownership,
+        efficiency_resourcefulness=entry.efficiency_resourcefulness,
+        efficiency_comment=entry.efficiency_comment,
+        conduct_mutual_trust=entry.conduct_mutual_trust,
+        conduct_proactivity=entry.conduct_proactivity,
+        conduct_leadership=entry.conduct_leadership,
+        conduct_comment=entry.conduct_comment,
+        general_comments=entry.general_comments,
     )
 
     database.session.add(final_entry)
@@ -485,15 +632,42 @@ def edit_final_entry(final_id):
         technical_rating = request.form.get("technical_rating", "").strip()
         project_rating = request.form.get("project_rating", "").strip()
         methodology_rating = request.form.get("methodology_rating", "").strip()
+        abilities_comment = request.form.get("abilities_comment", "").strip()
+        efficiency_collaboration = request.form.get("efficiency_collaboration", "").strip()
+        efficiency_ownership = request.form.get("efficiency_ownership", "").strip()
+        efficiency_resourcefulness = request.form.get("efficiency_resourcefulness", "").strip()
+        efficiency_comment = request.form.get("efficiency_comment", "").strip()
 
         objective_missing = not objective_rating or not objective_comment
         abilities_missing = (
-            not technical_rating or not project_rating or not methodology_rating
+            not technical_rating
+            or not project_rating
+            or not methodology_rating
+            or not abilities_comment
+            or not efficiency_collaboration
+            or not efficiency_ownership
+            or not efficiency_resourcefulness
+            or not efficiency_comment
+            or not conduct_mutual_trust
+            or not conduct_proactivity
+            or not conduct_leadership
+            or not conduct_comment
+            or not general_comments
         )
         objective_invalid = not _validate_choice(objective_rating, OBJECTIVE_CHOICES)
         abilities_invalid = not all(
             _validate_choice(val, ABILITY_CHOICES)
-            for val in (technical_rating, project_rating, methodology_rating)
+            for val in (
+                technical_rating,
+                project_rating,
+                methodology_rating,
+                efficiency_collaboration,
+                efficiency_ownership,
+                efficiency_resourcefulness,
+                conduct_mutual_trust,
+                conduct_proactivity,
+                conduct_leadership,
+            )
         )
 
         if (
@@ -511,6 +685,16 @@ def edit_final_entry(final_id):
         final_entry.technical_rating = technical_rating
         final_entry.project_rating = project_rating
         final_entry.methodology_rating = methodology_rating
+        final_entry.abilities_comment = abilities_comment
+        final_entry.efficiency_collaboration = efficiency_collaboration
+        final_entry.efficiency_ownership = efficiency_ownership
+        final_entry.efficiency_resourcefulness = efficiency_resourcefulness
+        final_entry.efficiency_comment = efficiency_comment
+        final_entry.conduct_mutual_trust = conduct_mutual_trust
+        final_entry.conduct_proactivity = conduct_proactivity
+        final_entry.conduct_leadership = conduct_leadership
+        final_entry.conduct_comment = conduct_comment
+        final_entry.general_comments = general_comments
         database.session.commit()
         flash("Final assessment updated", "success")
         return redirect(url_for("index"))

@@ -48,6 +48,10 @@ addopts = [
     "--strict-markers",
     "--tb=short",
 ]
+filterwarnings = [
+    "ignore::sqlalchemy.exc.LegacyAPIWarning",
+    "ignore::DeprecationWarning:msal.*",
+]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]

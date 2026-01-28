@@ -4,6 +4,7 @@ import os
 import uuid
 
 from datetime import datetime
+from datetime import timezone
 from functools import wraps
 
 import msal
@@ -35,6 +36,12 @@ REDIRECT_PATH = "/auth/redirect"
 SCOPES = ["User.Read", "Directory.Read.All"]
 
 database = SQLAlchemy(app)
+
+
+def _utc_now():
+    """Return current UTC time with timezone awareness."""
+    return datetime.now(timezone.utc)
+
 
 OBJECTIVE_CHOICES = [
     "Exceeded objective",
@@ -74,10 +81,8 @@ class Entry(database.Model):
     conduct_leadership = database.Column(database.String(40), nullable=False, default="")
     conduct_comment = database.Column(database.Text, nullable=False, default="")
     general_comments = database.Column(database.Text, nullable=False, default="")
-    created_at = database.Column(database.DateTime, default=datetime.utcnow)
-    updated_at = database.Column(
-        database.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    created_at = database.Column(database.DateTime, default=_utc_now)
+    updated_at = database.Column(database.DateTime, default=_utc_now, onupdate=_utc_now)
 
 
 class FinalEntry(database.Model):
@@ -103,10 +108,8 @@ class FinalEntry(database.Model):
     conduct_leadership = database.Column(database.String(40), nullable=False, default="")
     conduct_comment = database.Column(database.Text, nullable=False, default="")
     general_comments = database.Column(database.Text, nullable=False, default="")
-    created_at = database.Column(database.DateTime, default=datetime.utcnow)
-    updated_at = database.Column(
-        database.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    created_at = database.Column(database.DateTime, default=_utc_now)
+    updated_at = database.Column(database.DateTime, default=_utc_now, onupdate=_utc_now)
 
 
 with app.app_context():

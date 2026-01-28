@@ -280,7 +280,7 @@ class TestRoutes:
         assert response.status_code == 302
 
         with app.app_context():
-            deleted_entry = Entry.query.get(entry_id)
+            deleted_entry = database.session.get(Entry, entry_id)
             assert deleted_entry is None
 
     def test_login_route(self, client):

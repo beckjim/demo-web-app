@@ -5,7 +5,7 @@ description = "Flask form demo with SQLite backend"
 authors = [{ name = "Your Name" }]
 requires-python = ">=3.9"
 dependencies = [
-    "Flask==3.0.2",
+    "Flask==3.1.2",
     "Flask-SQLAlchemy==3.1.1",
     "msal==1.29.0",
     "python-dotenv==1.0.1",

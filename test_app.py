@@ -208,33 +208,39 @@ class TestRoutes:
 
     def test_create_entry_validation(self, authenticated_session):
         """Test create entry with missing fields."""
-        response = authenticated_session.post("/entries", data={
-            "objective_rating": "Achieved objective",
-            # Missing other required fields
-        })
+        response = authenticated_session.post(
+            "/entries",
+            data={
+                "objective_rating": "Achieved objective",
+                # Missing other required fields
+            },
+        )
         assert response.status_code == 302
         # Should redirect back with error
 
     def test_create_entry_success(self, authenticated_session):
         """Test successful entry creation."""
         with app.app_context():
-            response = authenticated_session.post("/entries", data={
-                "objective_rating": "Achieved objective",
-                "objective_comment": "Test objective comment",
-                "technical_rating": "Meets expectations",
-                "project_rating": "Meets expectations",
-                "methodology_rating": "Meets expectations",
-                "abilities_comment": "Test abilities comment",
-                "efficiency_collaboration": "Meets expectations",
-                "efficiency_ownership": "Meets expectations",
-                "efficiency_resourcefulness": "Meets expectations",
-                "efficiency_comment": "Test efficiency comment",
-                "conduct_mutual_trust": "Meets expectations",
-                "conduct_proactivity": "Meets expectations",
-                "conduct_leadership": "N/A",
-                "conduct_comment": "Test conduct comment",
-                "general_comments": "Test general comments",
-            })
+            response = authenticated_session.post(
+                "/entries",
+                data={
+                    "objective_rating": "Achieved objective",
+                    "objective_comment": "Test objective comment",
+                    "technical_rating": "Meets expectations",
+                    "project_rating": "Meets expectations",
+                    "methodology_rating": "Meets expectations",
+                    "abilities_comment": "Test abilities comment",
+                    "efficiency_collaboration": "Meets expectations",
+                    "efficiency_ownership": "Meets expectations",
+                    "efficiency_resourcefulness": "Meets expectations",
+                    "efficiency_comment": "Test efficiency comment",
+                    "conduct_mutual_trust": "Meets expectations",
+                    "conduct_proactivity": "Meets expectations",
+                    "conduct_leadership": "N/A",
+                    "conduct_comment": "Test conduct comment",
+                    "general_comments": "Test general comments",
+                },
+            )
             assert response.status_code == 302
 
             # Verify entry was created
@@ -295,42 +301,48 @@ class TestFormValidation:
 
     def test_invalid_objective_rating(self, authenticated_session):
         """Test rejection of invalid objective rating."""
-        response = authenticated_session.post("/entries", data={
-            "objective_rating": "Invalid Rating",
-            "objective_comment": "Test",
-            "technical_rating": "Meets expectations",
-            "project_rating": "Meets expectations",
-            "methodology_rating": "Meets expectations",
-            "abilities_comment": "Test",
-            "efficiency_collaboration": "Meets expectations",
-            "efficiency_ownership": "Meets expectations",
-            "efficiency_resourcefulness": "Meets expectations",
-            "efficiency_comment": "Test",
-            "conduct_mutual_trust": "Meets expectations",
-            "conduct_proactivity": "Meets expectations",
-            "conduct_leadership": "N/A",
-            "conduct_comment": "Test",
-            "general_comments": "Test",
-        })
+        response = authenticated_session.post(
+            "/entries",
+            data={
+                "objective_rating": "Invalid Rating",
+                "objective_comment": "Test",
+                "technical_rating": "Meets expectations",
+                "project_rating": "Meets expectations",
+                "methodology_rating": "Meets expectations",
+                "abilities_comment": "Test",
+                "efficiency_collaboration": "Meets expectations",
+                "efficiency_ownership": "Meets expectations",
+                "efficiency_resourcefulness": "Meets expectations",
+                "efficiency_comment": "Test",
+                "conduct_mutual_trust": "Meets expectations",
+                "conduct_proactivity": "Meets expectations",
+                "conduct_leadership": "N/A",
+                "conduct_comment": "Test",
+                "general_comments": "Test",
+            },
+        )
         assert response.status_code == 302
 
     def test_invalid_ability_rating(self, authenticated_session):
         """Test rejection of invalid ability rating."""
-        response = authenticated_session.post("/entries", data={
-            "objective_rating": "Achieved objective",
-            "objective_comment": "Test",
-            "technical_rating": "Invalid Rating",
-            "project_rating": "Meets expectations",
-            "methodology_rating": "Meets expectations",
-            "abilities_comment": "Test",
-            "efficiency_collaboration": "Meets expectations",
-            "efficiency_ownership": "Meets expectations",
-            "efficiency_resourcefulness": "Meets expectations",
-            "efficiency_comment": "Test",
-            "conduct_mutual_trust": "Meets expectations",
-            "conduct_proactivity": "Meets expectations",
-            "conduct_leadership": "N/A",
-            "conduct_comment": "Test",
-            "general_comments": "Test",
-        })
+        response = authenticated_session.post(
+            "/entries",
+            data={
+                "objective_rating": "Achieved objective",
+                "objective_comment": "Test",
+                "technical_rating": "Invalid Rating",
+                "project_rating": "Meets expectations",
+                "methodology_rating": "Meets expectations",
+                "abilities_comment": "Test",
+                "efficiency_collaboration": "Meets expectations",
+                "efficiency_ownership": "Meets expectations",
+                "efficiency_resourcefulness": "Meets expectations",
+                "efficiency_comment": "Test",
+                "conduct_mutual_trust": "Meets expectations",
+                "conduct_proactivity": "Meets expectations",
+                "conduct_leadership": "N/A",
+                "conduct_comment": "Test",
+                "general_comments": "Test",
+            },
+        )
         assert response.status_code == 302

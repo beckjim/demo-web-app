@@ -236,10 +236,7 @@ def _fetch_manager_name(access_token: str) -> str:
         if response.status_code == 200:
             data = response.json()
             return (
-                data.get("displayName")
-                or data.get("mail")
-                or data.get("userPrincipalName")
-                or ""
+                data.get("displayName") or data.get("mail") or data.get("userPrincipalName") or ""
             )
 
         if response.status_code == 404:
@@ -308,9 +305,7 @@ def new_entry():
     name = session_user.get("name", "")
 
     existing_entry = (
-        Entry.query.filter(func.lower(Entry.name) == name.lower()).first()
-        if name
-        else None
+        Entry.query.filter(func.lower(Entry.name) == name.lower()).first() if name else None
     )
     if existing_entry:
         flash("You already have an entry. Redirected to edit.", "info")
@@ -422,9 +417,7 @@ def create_entry():
         return redirect(url_for("index"))
 
     existing_entry = (
-        Entry.query.filter(func.lower(Entry.name) == name.lower()).first()
-        if name
-        else None
+        Entry.query.filter(func.lower(Entry.name) == name.lower()).first() if name else None
     )
     if existing_entry:
         flash(
@@ -521,12 +514,7 @@ def edit_entry(entry_id):
             )
         )
 
-        if (
-            objective_missing
-            or abilities_missing
-            or objective_invalid
-            or abilities_invalid
-        ):
+        if objective_missing or abilities_missing or objective_invalid or abilities_invalid:
             flash("All fields must be completed with valid options", "error")
             return redirect(url_for("edit_entry", entry_id=entry_id))
 
@@ -680,12 +668,7 @@ def edit_final_entry(final_id):
             )
         )
 
-        if (
-            objective_missing
-            or abilities_missing
-            or objective_invalid
-            or abilities_invalid
-        ):
+        if objective_missing or abilities_missing or objective_invalid or abilities_invalid:
             flash("All fields must be completed with valid options", "error")
             return redirect(url_for("edit_final_entry", final_id=final_id))
 
@@ -753,9 +736,7 @@ def authorized():
     )
 
     if "error" in result:
-        flash(
-            f"Login failed: {result.get('error_description', 'Unknown error')}", "error"
-        )
+        flash(f"Login failed: {result.get('error_description', 'Unknown error')}", "error")
         return redirect(url_for("index"))
 
     claims = result.get("id_token_claims", {})
@@ -787,9 +768,7 @@ def logout():
 
     session.clear()
     post_logout = url_for("index", _external=True)
-    return redirect(
-        f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri={post_logout}"
-    )
+    return redirect(f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri={post_logout}")
 
 
 if __name__ == "__main__":

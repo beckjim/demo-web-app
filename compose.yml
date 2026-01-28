@@ -1,6 +1,7 @@
 services:
   web:
     build: .
+    image: ghcr.io/beckjim/demo-web-app:latest
     ports:
       - "5000:5000"
     volumes:

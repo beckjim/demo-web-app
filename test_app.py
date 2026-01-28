@@ -1,18 +1,16 @@
 """Unit tests for the Flask demo app."""
 
 import pytest
-from app import (
-    app,
-    database,
-    Entry,
-    FinalEntry,
-    _validate_choice,
-    _can_access_entry,
-    _can_manage_entry,
-    _can_manage_final,
-    OBJECTIVE_CHOICES,
-    ABILITY_CHOICES,
-)
+
+from app import ABILITY_CHOICES
+from app import OBJECTIVE_CHOICES
+from app import Entry
+from app import FinalEntry
+from app import _can_access_entry
+from app import _can_manage_entry
+from app import _validate_choice
+from app import app
+from app import database
 
 
 @pytest.fixture
@@ -21,7 +19,7 @@ def client():
     app.config["TESTING"] = True
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
     app.config["SECRET_KEY"] = "test-secret-key"
-    
+
     with app.test_client() as client:
         with app.app_context():
             database.create_all()
@@ -144,10 +142,10 @@ class TestValidation:
                 conduct_comment="Test",
                 general_comments="Test",
             )
-            
+
             session_user = {"name": "Test User"}
             assert _can_access_entry(entry, session_user) is True
-            
+
             other_user = {"name": "Other User"}
             assert _can_access_entry(entry, other_user) is False
 
@@ -174,10 +172,10 @@ class TestValidation:
                 conduct_comment="Test",
                 general_comments="Test",
             )
-            
+
             manager = {"name": "Manager Name"}
             assert _can_manage_entry(entry, manager) is True
-            
+
             non_manager = {"name": "Other User"}
             assert _can_manage_entry(entry, non_manager) is False
 
@@ -238,7 +236,7 @@ class TestRoutes:
                 "general_comments": "Test general comments",
             })
             assert response.status_code == 302
-            
+
             # Verify entry was created
             entry = Entry.query.first()
             assert entry is not None

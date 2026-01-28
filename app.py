@@ -2,13 +2,21 @@
 
 import os
 import uuid
+
 from datetime import datetime
 from functools import wraps
 
 import msal
 import requests
+
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask
+from flask import flash
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import session
+from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 
@@ -634,6 +642,11 @@ def edit_final_entry(final_id):
         efficiency_ownership = request.form.get("efficiency_ownership", "").strip()
         efficiency_resourcefulness = request.form.get("efficiency_resourcefulness", "").strip()
         efficiency_comment = request.form.get("efficiency_comment", "").strip()
+        conduct_mutual_trust = request.form.get("conduct_mutual_trust", "").strip()
+        conduct_proactivity = request.form.get("conduct_proactivity", "").strip()
+        conduct_leadership = request.form.get("conduct_leadership", "").strip()
+        conduct_comment = request.form.get("conduct_comment", "").strip()
+        general_comments = request.form.get("general_comments", "").strip()
 
         objective_missing = not objective_rating or not objective_comment
         abilities_missing = (

@@ -9,7 +9,7 @@ dependencies = [
     "Flask-SQLAlchemy==3.1.1",
     "msal==1.29.0",
     "python-dotenv==1.0.1",
-    "requests==2.32.3",
+    "requests==2.32.5",
 ]
 
 [project.optional-dependencies]

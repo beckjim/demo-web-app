@@ -137,6 +137,7 @@
         <div class="summary">
           <div><strong>Objective rating:</strong> {{ entry.objective_rating }}</div>
           <div><strong>Objective comments:</strong> {{ entry.objective_comment }}</div>
+          <div><strong>Manager's objective comments:</strong> {{ entry.manager_objective_comment or 'N/A' }}</div>
           <div><strong>Abilities:</strong>
             <ul>
               <li>Technical/functional skills: {{ entry.technical_rating }}</li>
@@ -144,6 +145,7 @@
               <li>Methodology/processes competencies: {{ entry.methodology_rating }}</li>
             </ul>
             <div><strong>Abilities comments:</strong> {{ entry.abilities_comment }}</div>
+            <div><strong>Manager's abilities comments:</strong> {{ entry.manager_abilities_comment or 'N/A' }}</div>
           </div>
           <div><strong>Efficiency:</strong>
             <ul>
@@ -152,6 +154,7 @@
               <li>Resourcefulness: {{ entry.efficiency_resourcefulness }}</li>
             </ul>
             <div><strong>Efficiency comments:</strong> {{ entry.efficiency_comment }}</div>
+            <div><strong>Manager's efficiency comments:</strong> {{ entry.manager_efficiency_comment or 'N/A' }}</div>
           </div>
           <div><strong>Conduct in the service:</strong>
             <ul>

@@ -81,6 +81,7 @@ class Entry(database.Model):
     conduct_leadership = database.Column(database.String(40), nullable=False, default="")
     conduct_comment = database.Column(database.Text, nullable=False, default="")
     general_comments = database.Column(database.Text, nullable=False, default="")
+    feedback_received = database.Column(database.String(10), nullable=False, default="")
     created_at = database.Column(database.DateTime, default=_utc_now)
     updated_at = database.Column(database.DateTime, default=_utc_now, onupdate=_utc_now)
 
@@ -95,6 +96,7 @@ class FinalEntry(database.Model):
     manager_name = database.Column(database.String(120), nullable=False, default="")
     objective_rating = database.Column(database.String(60), nullable=False)
     objective_comment = database.Column(database.Text, nullable=False)
+    manager_objective_comment = database.Column(database.Text, nullable=False, default="")
     technical_rating = database.Column(database.String(40), nullable=False)
     project_rating = database.Column(database.String(40), nullable=False)
     methodology_rating = database.Column(database.String(40), nullable=False)
@@ -108,6 +110,7 @@ class FinalEntry(database.Model):
     conduct_leadership = database.Column(database.String(40), nullable=False, default="")
     conduct_comment = database.Column(database.Text, nullable=False, default="")
     general_comments = database.Column(database.Text, nullable=False, default="")
+    feedback_received = database.Column(database.String(10), nullable=False, default="")
     created_at = database.Column(database.DateTime, default=_utc_now)
     updated_at = database.Column(database.DateTime, default=_utc_now, onupdate=_utc_now)
 
@@ -145,6 +148,7 @@ with app.app_context():
             ("conduct_leadership", "TEXT", "''"),
             ("conduct_comment", "TEXT", "''"),
             ("general_comments", "TEXT", "''"),
+            ("feedback_received", "TEXT", "''"),
         ]
         for col_name, col_type, default_val in add_cols:
             if col_name not in existing_cols:
@@ -156,7 +160,9 @@ with app.app_context():
         cursor.execute("PRAGMA table_info(final_entry)")
         final_existing_cols = {row[1] for row in cursor.fetchall()}
         final_add_cols = [
+            ("manager_objective_comment", "TEXT", "''"),
             ("abilities_comment", "TEXT", "''"),
+            ("manager_abilities_comment", "TEXT", "''"),
             ("efficiency_collaboration", "TEXT", "''"),
             ("efficiency_ownership", "TEXT", "''"),
             ("efficiency_resourcefulness", "TEXT", "''"),
@@ -166,6 +172,7 @@ with app.app_context():
             ("conduct_leadership", "TEXT", "''"),
             ("conduct_comment", "TEXT", "''"),
             ("general_comments", "TEXT", "''"),
+            ("feedback_received", "TEXT", "''"),
         ]
         for col_name, col_type, default_val in final_add_cols:
             if col_name not in final_existing_cols:
@@ -625,30 +632,35 @@ def edit_final_entry(final_id):
     if request.method == "POST":
         objective_rating = request.form.get("objective_rating", "").strip()
         objective_comment = request.form.get("objective_comment", "").strip()
+        manager_objective_comment = request.form.get("manager_objective_comment", "").strip()
         technical_rating = request.form.get("technical_rating", "").strip()
         project_rating = request.form.get("project_rating", "").strip()
         methodology_rating = request.form.get("methodology_rating", "").strip()
         abilities_comment = request.form.get("abilities_comment", "").strip()
+        manager_abilities_comment = request.form.get("manager_abilities_comment", "").strip()
         efficiency_collaboration = request.form.get("efficiency_collaboration", "").strip()
         efficiency_ownership = request.form.get("efficiency_ownership", "").strip()
         efficiency_resourcefulness = request.form.get("efficiency_resourcefulness", "").strip()
         efficiency_comment = request.form.get("efficiency_comment", "").strip()
+        manager_efficiency_comment = request.form.get("manager_efficiency_comment", "").strip()
         conduct_mutual_trust = request.form.get("conduct_mutual_trust", "").strip()
         conduct_proactivity = request.form.get("conduct_proactivity", "").strip()
         conduct_leadership = request.form.get("conduct_leadership", "").strip()
         conduct_comment = request.form.get("conduct_comment", "").strip()
         general_comments = request.form.get("general_comments", "").strip()
 
-        objective_missing = not objective_rating or not objective_comment
+        objective_missing = not objective_rating or not objective_comment or not manager_objective_comment
         abilities_missing = (
             not technical_rating
             or not project_rating
             or not methodology_rating
             or not abilities_comment
+            or not manager_abilities_comment
             or not efficiency_collaboration
             or not efficiency_ownership
             or not efficiency_resourcefulness
             or not efficiency_comment
+            or not manager_efficiency_comment
             or not conduct_mutual_trust
             or not conduct_proactivity
             or not conduct_leadership
@@ -678,14 +690,17 @@ def edit_final_entry(final_id):
         final_entry.manager_name = session_user.get("name") or final_entry.manager_name
         final_entry.objective_rating = objective_rating
         final_entry.objective_comment = objective_comment
+        final_entry.manager_objective_comment = manager_objective_comment
         final_entry.technical_rating = technical_rating
         final_entry.project_rating = project_rating
         final_entry.methodology_rating = methodology_rating
         final_entry.abilities_comment = abilities_comment
+        final_entry.manager_abilities_comment = manager_abilities_comment
         final_entry.efficiency_collaboration = efficiency_collaboration
         final_entry.efficiency_ownership = efficiency_ownership
         final_entry.efficiency_resourcefulness = efficiency_resourcefulness
         final_entry.efficiency_comment = efficiency_comment
+        final_entry.manager_efficiency_comment = manager_efficiency_comment
         final_entry.conduct_mutual_trust = conduct_mutual_trust
         final_entry.conduct_proactivity = conduct_proactivity
         final_entry.conduct_leadership = conduct_leadership

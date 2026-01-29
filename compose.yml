@@ -8,10 +8,14 @@ services:
       # - app-data:/app/instance
       - ./instance:/app/instance
     environment:
-      - FLASK_APP=app
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
       - AZURE_AD_CLIENT_SECRET=${AZURE_AD_CLIENT_SECRET}
     restart: unless-stopped
-
-volumes:
-  app-data:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+# volumes:
+#   app-data:

@@ -313,6 +313,39 @@
     .tab-panel.active {
       display: block;
     }
+
+    .user-display-name {
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    .user-display-name:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    #user-info-popup {
+      position: fixed;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      min-width: 250px;
+    }
+
+    #user-info-popup p {
+      margin: 6px 0;
+      font-size: 14px;
+    }
+
+    #user-info-popup strong {
+      display: inline-block;
+      min-width: 80px;
+      color: var(--accent);
+    }
   </style>
 </head>
 
@@ -324,7 +357,8 @@
     </div>
     <div class="header-actions">
       {% if session.get('user') %}
-      <span>{{ session['user']['name'] or session['user']['email'] }}</span>
+      <span class="user-display-name" id="user-display-name">{{ session['user']['name'] or session['user']['email']
+        }}</span>
       <a class="button-link" href="{{ url_for('logout') }}">Sign out</a>
       {% else %}
       <a class="button-link" href="{{ url_for('login') }}">Sign in with Microsoft</a>
@@ -343,48 +377,88 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
-  <div id="user-info-popup"
-    style="display:none; position:absolute; background:white; border:1px solid var(--border); border-radius:8px; padding:10px; box-shadow: var(--shadow); z-index:1000;">
-    <p><strong>Email:</strong> {{ session['user']['email'] }}</p>
-    <p><strong>Manager:</strong> {{ session['user']['manager_name'] }}</p>
+  <div id="user-info-popup" style="display: none;">
+    {% if session.get('user') %}
+    <p><strong>Email:</strong><br>{{ session['user']['email'] }}</p>
+    <p><strong>Manager:</strong><br>{{ session['user']['manager_name'] or 'Not available' }}</p>
+    {% endif %}
   </div>
   <script>
-    document.querySelectorAll('[data-tab-root]').forEach(function (root) {
-      var buttons = root.querySelectorAll('[data-tab-target]');
-      var panels = root.querySelectorAll('.tab-panel');
+    function initializeTabs() {
+      // User info popup functionality
+      const userDisplayNameBtn = document.getElementById('user-display-name');
+      const userInfoPopup = document.getElementById('user-info-popup');
 
-      function activate(targetId) {
-        buttons.forEach(function (btn) {
-          var isActive = btn.getAttribute('data-tab-target') === targetId;
-          btn.classList.toggle('active', isActive);
-          btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-          btn.setAttribute('tabindex', isActive ? '0' : '-1');
+      if (userDisplayNameBtn && userInfoPopup) {
+        userDisplayNameBtn.addEventListener('click', function (event) {
+          event.stopPropagation();
+          const isVisible = userInfoPopup.style.display === 'block';
+          userInfoPopup.style.display = isVisible ? 'none' : 'block';
+
+          if (!isVisible) {
+            // Position the popup below the user name
+            const rect = userDisplayNameBtn.getBoundingClientRect();
+            userInfoPopup.style.top = (rect.bottom + 8) + 'px';
+            userInfoPopup.style.left = (rect.left) + 'px';
+          }
         });
-        panels.forEach(function (panel) {
-          var isActive = panel.id === targetId;
-          panel.classList.toggle('active', isActive);
-          panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+
+        // Close popup when clicking outside
+        document.addEventListener('click', function (event) {
+          if (!userDisplayNameBtn.contains(event.target) && !userInfoPopup.contains(event.target)) {
+            userInfoPopup.style.display = 'none';
+          }
         });
       }
 
-      buttons.forEach(function (button, index) {
-        button.setAttribute('role', 'tab');
-        button.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
-        button.setAttribute('tabindex', index === 0 ? '0' : '-1');
-        button.addEventListener('click', function (event) {
-          event.preventDefault();
-          activate(button.getAttribute('data-tab-target'));
+      // Tab functionality
+      document.querySelectorAll('[data-tab-root]').forEach(function (root) {
+        var buttons = root.querySelectorAll('button[data-tab-target]');
+        var panels = root.querySelectorAll('.tab-panel');
+
+        function activate(targetId) {
+          buttons.forEach(function (btn) {
+            var isActive = btn.getAttribute('data-tab-target') === targetId;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            btn.setAttribute('tabindex', isActive ? '0' : '-1');
+          });
+          panels.forEach(function (panel) {
+            var isActive = panel.id === targetId;
+            panel.classList.toggle('active', isActive);
+            panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+          });
+        }
+
+        buttons.forEach(function (button, index) {
+          button.setAttribute('role', 'tab');
+          button.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+          button.setAttribute('tabindex', index === 0 ? '0' : '-1');
+          button.addEventListener('click', function (event) {
+            event.preventDefault();
+            var targetId = button.getAttribute('data-tab-target');
+            if (targetId) {
+              activate(targetId);
+            }
+          });
+        });
+
+        panels.forEach(function (panel, index) {
+          panel.setAttribute('role', 'tabpanel');
+          panel.setAttribute('aria-hidden', index === 0 ? 'false' : 'true');
+          if (index === 0) {
+            panel.classList.add('active');
+          }
         });
       });
+    }
 
-      root.querySelectorAll('.tab-panels .tab-panel').forEach(function (panel, index) {
-        panel.setAttribute('role', 'tabpanel');
-        panel.setAttribute('aria-hidden', index === 0 ? 'false' : 'true');
-        if (index === 0) {
-          panel.classList.add('active');
-        }
-      });
-    });
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeTabs);
+    } else {
+      initializeTabs();
+    }
   </script>
 </body>
 

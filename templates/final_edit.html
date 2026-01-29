@@ -228,6 +228,15 @@
             </div>
         </fieldset>
 
+        <fieldset>
+            <legend>General Comments from Manager *</legend>
+            <p>Manager's overall feedback and comments on the employee's performance assessment.</p>
+            <div>
+                <textarea id="manager_general_comments" name="manager_general_comments"
+                    required>{{ entry.manager_general_comments }}</textarea>
+            </div>
+        </fieldset>
+
         <div class="actions">
             <button type="submit">Save Final Assessment</button>
             <a class="button-link" href="{{ url_for('index') }}">Back to Assessments</a>

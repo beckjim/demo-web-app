@@ -54,11 +54,15 @@
           <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
         </div>
         <div class="actions">
+          {% if entry.id not in final_lookup %}
           <a class="button-link" href="{{ url_for('edit_entry', entry_id=entry.id) }}">Edit</a>
           <form method="post" action="{{ url_for('delete_entry', entry_id=entry.id) }}"
             onsubmit="return confirm('Delete this entry?');">
             <button class="secondary" type="submit">Delete</button>
           </form>
+          {% else %}
+          <span style="color: #666; font-style: italic;">Final assessment created - editing locked</span>
+          {% endif %}
         </div>
       </div>
       {% endfor %}
@@ -166,6 +170,7 @@
           </div>
           <div><strong>Feedback received:</strong> {{ entry.feedback_received or 'N/A' }}</div>
           <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
+          <div><strong>Manager's general comments:</strong> {{ entry.manager_general_comments or 'N/A' }}</div>
         </div>
         <div class="actions">
           <a class="button-link" href="{{ url_for('edit_final_entry', final_id=entry.id) }}">Edit Final Assessment</a>

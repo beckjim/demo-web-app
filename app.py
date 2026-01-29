@@ -101,15 +101,18 @@ class FinalEntry(database.Model):
     project_rating = database.Column(database.String(40), nullable=False)
     methodology_rating = database.Column(database.String(40), nullable=False)
     abilities_comment = database.Column(database.Text, nullable=False, default="")
+    manager_abilities_comment = database.Column(database.Text, nullable=False, default="")
     efficiency_collaboration = database.Column(database.String(40), nullable=False, default="")
     efficiency_ownership = database.Column(database.String(40), nullable=False, default="")
     efficiency_resourcefulness = database.Column(database.String(40), nullable=False, default="")
     efficiency_comment = database.Column(database.Text, nullable=False, default="")
+    manager_efficiency_comment = database.Column(database.Text, nullable=False, default="")
     conduct_mutual_trust = database.Column(database.String(40), nullable=False, default="")
     conduct_proactivity = database.Column(database.String(40), nullable=False, default="")
     conduct_leadership = database.Column(database.String(40), nullable=False, default="")
     conduct_comment = database.Column(database.Text, nullable=False, default="")
     general_comments = database.Column(database.Text, nullable=False, default="")
+    manager_general_comments = database.Column(database.Text, nullable=False, default="")
     feedback_received = database.Column(database.String(10), nullable=False, default="")
     created_at = database.Column(database.DateTime, default=_utc_now)
     updated_at = database.Column(database.DateTime, default=_utc_now, onupdate=_utc_now)
@@ -473,6 +476,12 @@ def edit_entry(entry_id):
         flash("You are not allowed to access this entry", "error")
         return redirect(url_for("index"))
 
+    # Check if a final assessment already exists for this entry
+    final_entry = FinalEntry.query.filter_by(source_entry_id=entry_id).first()
+    if final_entry:
+        flash("Cannot edit this self-assessment because a final assessment has already been created.", "error")
+        return redirect(url_for("index"))
+
     if request.method == "POST":
         name = entry.name
         email = entry.email
@@ -648,6 +657,7 @@ def edit_final_entry(final_id):
         conduct_leadership = request.form.get("conduct_leadership", "").strip()
         conduct_comment = request.form.get("conduct_comment", "").strip()
         general_comments = request.form.get("general_comments", "").strip()
+        manager_general_comments = request.form.get("manager_general_comments", "").strip()
 
         objective_missing = not objective_rating or not objective_comment or not manager_objective_comment
         abilities_missing = (
@@ -666,6 +676,7 @@ def edit_final_entry(final_id):
             or not conduct_leadership
             or not conduct_comment
             or not general_comments
+            or not manager_general_comments
         )
         objective_invalid = not _validate_choice(objective_rating, OBJECTIVE_CHOICES)
         abilities_invalid = not all(
@@ -706,6 +717,7 @@ def edit_final_entry(final_id):
         final_entry.conduct_leadership = conduct_leadership
         final_entry.conduct_comment = conduct_comment
         final_entry.general_comments = general_comments
+        final_entry.manager_general_comments = manager_general_comments
         database.session.commit()
         flash("Final assessment updated", "success")
         return redirect(url_for("index"))

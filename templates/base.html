@@ -343,6 +343,11 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+  <div id="user-info-popup"
+    style="display:none; position:absolute; background:white; border:1px solid var(--border); border-radius:8px; padding:10px; box-shadow: var(--shadow); z-index:1000;">
+    <p><strong>Email:</strong> {{ session['user']['email'] }}</p>
+    <p><strong>Manager:</strong> {{ session['user']['manager_name'] }}</p>
+  </div>
   <script>
     document.querySelectorAll('[data-tab-root]').forEach(function (root) {
       var buttons = root.querySelectorAll('[data-tab-target]');

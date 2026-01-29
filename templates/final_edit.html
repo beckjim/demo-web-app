@@ -201,6 +201,7 @@
 
         <fieldset>
             <legend>Did you get feedback on your performance over the course of the reporting period? *</legend>
+            <p>Taken from self-assessment</p>
             <div class="ability-grid">
                 <div class="ability-row" style="justify-content: flex-start; gap: 20px;">
                     <label class="radio-option" style="flex: 0 0 auto;">
@@ -215,6 +216,7 @@
                     </label>
                 </div>
             </div>
+            <input type="hidden" name="feedback_received" value="{{ entry.feedback_received }}">
         </fieldset>
 
         <fieldset>
@@ -225,6 +227,14 @@
             <div>
                 <textarea id="general_comments" name="general_comments" readonly
                     required>{{ entry.general_comments }}</textarea>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Goals/objectives for 2026 *</legend>
+            <p>Employee's goals and objectives for the upcoming year.</p>
+            <div>
+                <textarea id="goals_2026" name="goals_2026" required>{{ entry.goals_2026 }}</textarea>
             </div>
         </fieldset>
 
@@ -240,6 +250,10 @@
         <div class="actions">
             <button type="submit">Save Final Assessment</button>
             <a class="button-link" href="{{ url_for('index') }}">Back to Assessments</a>
+            <form method="post" action="{{ url_for('delete_final_entry', final_id=entry.id) }}"
+                onsubmit="return confirm('Delete this final assessment?');">
+                <button class="secondary" type="submit">Delete</button>
+            </form>
         </div>
     </form>
 </section>

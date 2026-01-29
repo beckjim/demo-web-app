@@ -112,6 +112,7 @@ class FinalEntry(database.Model):
     conduct_leadership = database.Column(database.String(40), nullable=False, default="")
     conduct_comment = database.Column(database.Text, nullable=False, default="")
     general_comments = database.Column(database.Text, nullable=False, default="")
+    goals_2026 = database.Column(database.Text, nullable=False, default="")
     manager_general_comments = database.Column(database.Text, nullable=False, default="")
     feedback_received = database.Column(database.String(10), nullable=False, default="")
     created_at = database.Column(database.DateTime, default=_utc_now)
@@ -175,6 +176,9 @@ with app.app_context():
             ("conduct_leadership", "TEXT", "''"),
             ("conduct_comment", "TEXT", "''"),
             ("general_comments", "TEXT", "''"),
+            ("goals_2026", "TEXT", "''"),
+            ("manager_efficiency_comment", "TEXT", "''"),
+            ("manager_general_comments", "TEXT", "''"),
             ("feedback_received", "TEXT", "''"),
         ]
         for col_name, col_type, default_val in final_add_cols:
@@ -385,6 +389,7 @@ def create_entry():
     conduct_leadership = request.form.get("conduct_leadership", "").strip()
     conduct_comment = request.form.get("conduct_comment", "").strip()
     general_comments = request.form.get("general_comments", "").strip()
+    feedback_received = request.form.get("feedback_received", "").strip()
 
     base_missing = not name or not email
     objective_missing = not objective_rating or not objective_comment
@@ -402,6 +407,7 @@ def create_entry():
         or not conduct_leadership
         or not conduct_comment
         or not general_comments
+        or not feedback_received
     )
     objective_invalid = not _validate_choice(objective_rating, OBJECTIVE_CHOICES)
     abilities_invalid = not all(
@@ -458,6 +464,7 @@ def create_entry():
         conduct_leadership=conduct_leadership,
         conduct_comment=conduct_comment,
         general_comments=general_comments,
+        feedback_received=feedback_received,
     )
     database.session.add(entry)
     database.session.commit()
@@ -501,6 +508,7 @@ def edit_entry(entry_id):
         conduct_leadership = request.form.get("conduct_leadership", "").strip()
         conduct_comment = request.form.get("conduct_comment", "").strip()
         general_comments = request.form.get("general_comments", "").strip()
+        feedback_received = request.form.get("feedback_received", "").strip()
 
         objective_missing = not objective_rating or not objective_comment
         abilities_missing = (
@@ -516,6 +524,8 @@ def edit_entry(entry_id):
             or not conduct_proactivity
             or not conduct_leadership
             or not conduct_comment
+            or not general_comments
+            or not feedback_received
         )
         objective_invalid = not _validate_choice(objective_rating, OBJECTIVE_CHOICES)
         abilities_invalid = not all(
@@ -555,6 +565,7 @@ def edit_entry(entry_id):
         entry.conduct_leadership = conduct_leadership
         entry.conduct_comment = conduct_comment
         entry.general_comments = general_comments
+        entry.feedback_received = feedback_received
         database.session.commit()
         flash("Entry updated", "success")
         return redirect(url_for("index"))
@@ -618,6 +629,7 @@ def finalize_entry(entry_id):
         conduct_leadership=entry.conduct_leadership,
         conduct_comment=entry.conduct_comment,
         general_comments=entry.general_comments,
+        feedback_received=entry.feedback_received,
     )
 
     database.session.add(final_entry)
@@ -639,63 +651,42 @@ def edit_final_entry(final_id):
         return redirect(url_for("index"))
 
     if request.method == "POST":
-        objective_rating = request.form.get("objective_rating", "").strip()
-        objective_comment = request.form.get("objective_comment", "").strip()
+        # Readonly/disabled fields from self-assessment (use existing values)
+        objective_rating = final_entry.objective_rating
+        objective_comment = final_entry.objective_comment
+        technical_rating = final_entry.technical_rating
+        project_rating = final_entry.project_rating
+        methodology_rating = final_entry.methodology_rating
+        abilities_comment = final_entry.abilities_comment
+        efficiency_collaboration = final_entry.efficiency_collaboration
+        efficiency_ownership = final_entry.efficiency_ownership
+        efficiency_resourcefulness = final_entry.efficiency_resourcefulness
+        efficiency_comment = final_entry.efficiency_comment
+        conduct_mutual_trust = final_entry.conduct_mutual_trust
+        conduct_proactivity = final_entry.conduct_proactivity
+        conduct_leadership = final_entry.conduct_leadership
+        conduct_comment = final_entry.conduct_comment
+        general_comments = final_entry.general_comments
+        feedback_received = final_entry.feedback_received
+        
+        # Editable manager fields
         manager_objective_comment = request.form.get("manager_objective_comment", "").strip()
-        technical_rating = request.form.get("technical_rating", "").strip()
-        project_rating = request.form.get("project_rating", "").strip()
-        methodology_rating = request.form.get("methodology_rating", "").strip()
-        abilities_comment = request.form.get("abilities_comment", "").strip()
         manager_abilities_comment = request.form.get("manager_abilities_comment", "").strip()
-        efficiency_collaboration = request.form.get("efficiency_collaboration", "").strip()
-        efficiency_ownership = request.form.get("efficiency_ownership", "").strip()
-        efficiency_resourcefulness = request.form.get("efficiency_resourcefulness", "").strip()
-        efficiency_comment = request.form.get("efficiency_comment", "").strip()
         manager_efficiency_comment = request.form.get("manager_efficiency_comment", "").strip()
-        conduct_mutual_trust = request.form.get("conduct_mutual_trust", "").strip()
-        conduct_proactivity = request.form.get("conduct_proactivity", "").strip()
-        conduct_leadership = request.form.get("conduct_leadership", "").strip()
-        conduct_comment = request.form.get("conduct_comment", "").strip()
-        general_comments = request.form.get("general_comments", "").strip()
+        goals_2026 = request.form.get("goals_2026", "").strip()
         manager_general_comments = request.form.get("manager_general_comments", "").strip()
 
-        objective_missing = not objective_rating or not objective_comment or not manager_objective_comment
-        abilities_missing = (
-            not technical_rating
-            or not project_rating
-            or not methodology_rating
-            or not abilities_comment
+        # Validate only the editable manager fields
+        manager_fields_missing = (
+            not manager_objective_comment
             or not manager_abilities_comment
-            or not efficiency_collaboration
-            or not efficiency_ownership
-            or not efficiency_resourcefulness
-            or not efficiency_comment
             or not manager_efficiency_comment
-            or not conduct_mutual_trust
-            or not conduct_proactivity
-            or not conduct_leadership
-            or not conduct_comment
-            or not general_comments
+            or not goals_2026
             or not manager_general_comments
         )
-        objective_invalid = not _validate_choice(objective_rating, OBJECTIVE_CHOICES)
-        abilities_invalid = not all(
-            _validate_choice(val, ABILITY_CHOICES)
-            for val in (
-                technical_rating,
-                project_rating,
-                methodology_rating,
-                efficiency_collaboration,
-                efficiency_ownership,
-                efficiency_resourcefulness,
-                conduct_mutual_trust,
-                conduct_proactivity,
-                conduct_leadership,
-            )
-        )
 
-        if objective_missing or abilities_missing or objective_invalid or abilities_invalid:
-            flash("All fields must be completed with valid options", "error")
+        if manager_fields_missing:
+            flash("All manager fields must be completed", "error")
             return redirect(url_for("edit_final_entry", final_id=final_id))
 
         final_entry.manager_name = session_user.get("name") or final_entry.manager_name
@@ -717,6 +708,8 @@ def edit_final_entry(final_id):
         final_entry.conduct_leadership = conduct_leadership
         final_entry.conduct_comment = conduct_comment
         final_entry.general_comments = general_comments
+        final_entry.feedback_received = feedback_received
+        final_entry.goals_2026 = goals_2026
         final_entry.manager_general_comments = manager_general_comments
         database.session.commit()
         flash("Final assessment updated", "success")
@@ -728,6 +721,21 @@ def edit_final_entry(final_id):
         objective_choices=OBJECTIVE_CHOICES,
         ability_choices=ABILITY_CHOICES,
     )
+
+
+@app.route("/final_entries/<int:final_id>/delete", methods=["POST"])
+@login_required
+def delete_final_entry(final_id):
+    """Delete a final assessment."""
+    final_entry = FinalEntry.query.get_or_404(final_id)
+    session_user = session.get("user", {})
+    if not _can_manage_final(final_entry, session_user):
+        flash("You are not allowed to delete this final assessment", "error")
+        return redirect(url_for("index"))
+    database.session.delete(final_entry)
+    database.session.commit()
+    flash("Final assessment deleted", "success")
+    return redirect(url_for("index"))
 
 
 @app.route("/login")

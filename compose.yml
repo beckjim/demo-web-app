@@ -5,7 +5,8 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - app-data:/app/instance
+      # - app-data:/app/instance
+      - ./instance:/app/instance
     environment:
       - FLASK_APP=app
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}

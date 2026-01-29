@@ -50,6 +50,8 @@
             </ul>
             <div><strong>Conduct comments:</strong> {{ entry.conduct_comment }}</div>
           </div>
+          <div><strong>Feedback received:</strong> {{ entry.feedback_received or 'N/A' }}</div>
+          <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
         </div>
         <div class="actions">
           <a class="button-link" href="{{ url_for('edit_entry', entry_id=entry.id) }}">Edit</a>
@@ -102,6 +104,8 @@
             </ul>
             <div><strong>Conduct comments:</strong> {{ entry.conduct_comment }}</div>
           </div>
+          <div><strong>Feedback received:</strong> {{ entry.feedback_received or 'N/A' }}</div>
+          <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
         </div>
         <div class="actions">
           {% if final_lookup.get(entry.id) %}
@@ -157,6 +161,8 @@
             </ul>
             <div><strong>Conduct comments:</strong> {{ entry.conduct_comment }}</div>
           </div>
+          <div><strong>Feedback received:</strong> {{ entry.feedback_received or 'N/A' }}</div>
+          <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
         </div>
         <div class="actions">
           <a class="button-link" href="{{ url_for('edit_final_entry', final_id=entry.id) }}">Edit Final Assessment</a>

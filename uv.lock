@@ -310,7 +310,7 @@ wheels = [
 ]
 
 [[package]]
-name = "demo-web-app"
+name = "employee-dialogue"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

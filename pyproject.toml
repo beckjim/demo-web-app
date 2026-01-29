@@ -1,5 +1,5 @@
 [project]
-name = "demo-web-app"
+name = "employee-dialogue"
 version = "0.1.0"
 description = "Employee Dialogue - Performance review and assessment application"
 authors = [{ name = "Your Name" }]

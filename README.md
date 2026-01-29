@@ -1,6 +1,6 @@
-# Demo Flask Form App
+# Employee Dialogue
 
-Simple Flask app with SQLite backend that collects form submissions and allows editing and deleting later.
+Flask app for performance review self-assessments and manager evaluations with Microsoft 365 authentication.
 
 ## Prerequisites
 - Python 3.9+

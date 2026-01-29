@@ -1,7 +1,7 @@
 [project]
 name = "demo-web-app"
 version = "0.1.0"
-description = "Flask form demo with SQLite backend"
+description = "Employee Dialogue - Performance review and assessment application"
 authors = [{ name = "Your Name" }]
 requires-python = ">=3.9"
 dependencies = [

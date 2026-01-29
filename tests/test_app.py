@@ -1,4 +1,4 @@
-"""Unit tests for the Flask demo app."""
+"""Unit tests for the Employee Dialogue app."""
 
 import pytest
 

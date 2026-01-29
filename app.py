@@ -1,4 +1,4 @@
-"""Flask demo app to collect, edit, and delete form entries."""
+"""Employee Dialogue - Flask app to collect, edit, and delete performance review entries."""
 
 import os
 import uuid

@@ -169,6 +169,14 @@
                     {% endfor %}
                 </div>
             </div>
+
+            <div>
+                <label class="comment-label" for="conduct_comment">In case you selected "Exceeds expectations" on the
+                    conduct question
+                    above, justify your choice. *</label>
+                <p>If there are no comments or justification, please write N/A (not applicable).</p>
+                <textarea id="conduct_comment" name="conduct_comment" required>{{ entry.conduct_comment }}</textarea>
+            </div>
         </fieldset>
 
         <fieldset>

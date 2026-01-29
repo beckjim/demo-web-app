@@ -25,7 +25,7 @@
                     {% for choice in objective_choices %}
                     <label class="radio-option">
                         <input type="radio" name="objective_rating" value="{{ choice }}" {% if
-                            entry.objective_rating==choice %}checked{% endif %} required>
+                            entry.objective_rating==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -36,7 +36,7 @@
                 <label class="comment-label" for="objective_comment">Comments to the assessment of Objectives *</label>
                 <p>Mandatory in all cases, base your comments on the goals of the previous year. If you selected
                     "Exceeded objective", justify the choice.</p>
-                <textarea id="objective_comment" name="objective_comment"
+                <textarea id="objective_comment" name="objective_comment" readonly
                     required>{{ entry.objective_comment }}</textarea>
             </div>
         </fieldset>
@@ -50,7 +50,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="technical_rating" value="{{ choice }}" {% if
-                            entry.technical_rating==choice %}checked{% endif %} required>
+                            entry.technical_rating==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -60,7 +60,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="project_rating" value="{{ choice }}" {% if
-                            entry.project_rating==choice %}checked{% endif %} required>
+                            entry.project_rating==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -70,7 +70,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="methodology_rating" value="{{ choice }}" {% if
-                            entry.methodology_rating==choice %}checked{% endif %} required>
+                            entry.methodology_rating==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -82,7 +82,7 @@
                     above, justify your choice. *</label>
                 <p>If there are no comments or justification, please write N/A (not applicable).
                 </p>
-                <textarea id="abilities_comment" name="abilities_comment"
+                <textarea id="abilities_comment" name="abilities_comment" readonly
                     required>{{ entry.abilities_comment }}</textarea>
             </div>
         </fieldset>
@@ -96,7 +96,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="efficiency_collaboration" value="{{ choice }}" {% if
-                            entry.efficiency_collaboration==choice %}checked{% endif %} required>
+                            entry.efficiency_collaboration==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -106,7 +106,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="efficiency_ownership" value="{{ choice }}" {% if
-                            entry.efficiency_ownership==choice %}checked{% endif %} required>
+                            entry.efficiency_ownership==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -116,7 +116,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="efficiency_resourcefulness" value="{{ choice }}" {% if
-                            entry.efficiency_resourcefulness==choice %}checked{% endif %} required>
+                            entry.efficiency_resourcefulness==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -128,7 +128,7 @@
                     efficiency question
                     above, justify your choice. *</label>
                 <p>If there are no comments or justification, please write N/A (not applicable).</p>
-                <textarea id="efficiency_comment" name="efficiency_comment"
+                <textarea id="efficiency_comment" name="efficiency_comment" readonly
                     required>{{ entry.efficiency_comment }}</textarea>
             </div>
         </fieldset>
@@ -142,7 +142,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="conduct_mutual_trust" value="{{ choice }}" {% if
-                            entry.conduct_mutual_trust==choice %}checked{% endif %} required>
+                            entry.conduct_mutual_trust==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -152,7 +152,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="conduct_proactivity" value="{{ choice }}" {% if
-                            entry.conduct_proactivity==choice %}checked{% endif %} required>
+                            entry.conduct_proactivity==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -162,7 +162,7 @@
                     {% for choice in ability_choices %}
                     <label class="radio-option">
                         <input type="radio" name="conduct_leadership" value="{{ choice }}" {% if
-                            entry.conduct_leadership==choice %}checked{% endif %} required>
+                            entry.conduct_leadership==choice %}checked{% endif %} disabled required>
                         <span>{{ choice }}</span>
                     </label>
                     {% endfor %}
@@ -173,7 +173,8 @@
                     conduct question
                     above, justify your choice. *</label>
                 <p>If there are no comments or justification, please write N/A (not applicable).</p>
-                <textarea id="conduct_comment" name="conduct_comment" required>{{ entry.conduct_comment }}</textarea>
+                <textarea id="conduct_comment" name="conduct_comment" readonly
+                    required>{{ entry.conduct_comment }}</textarea>
             </div>
         </fieldset>
 
@@ -183,12 +184,12 @@
                 <div class="ability-row" style="justify-content: flex-start; gap: 20px;">
                     <label class="radio-option" style="flex: 0 0 auto;">
                         <input type="radio" name="feedback_received" value="Yes" {% if entry.feedback_received=='Yes'
-                            %}checked{% endif %} required>
+                            %}checked{% endif %} disabled required>
                         <span>Yes</span>
                     </label>
                     <label class="radio-option" style="flex: 0 0 auto;">
                         <input type="radio" name="feedback_received" value="No" {% if entry.feedback_received=='No'
-                            %}checked{% endif %} required>
+                            %}checked{% endif %} disabled required>
                         <span>No</span>
                     </label>
                 </div>
@@ -201,7 +202,8 @@
                 manager(s)? In case you have wishes for potential training or changes in working conditions, please
                 address them in this section</p>
             <div>
-                <textarea id="general_comments" name="general_comments" required>{{ entry.general_comments }}</textarea>
+                <textarea id="general_comments" name="general_comments" readonly
+                    required>{{ entry.general_comments }}</textarea>
             </div>
         </fieldset>
 

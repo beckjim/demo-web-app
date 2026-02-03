@@ -59,3 +59,20 @@ filterwarnings = [
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
+[project.readme]
+readme = "README.md"
+
+[project.license]
+license = { text = "MIT" }
+
+[project.keywords]
+keywords = ["employee", "dialogue", "performance", "review", "assessment"]
+
+[project.classifiers]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Framework :: Flask",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]

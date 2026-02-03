@@ -2,6 +2,9 @@
 
 import os
 import uuid
+from typing import Any
+from typing import Callable
+from typing import Union
 
 from datetime import datetime
 from datetime import timezone
@@ -20,6 +23,7 @@ from flask import session
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
+from werkzeug.wrappers.response import Response
 
 load_dotenv()
 
@@ -38,7 +42,7 @@ SCOPES = ["User.Read", "Directory.Read.All"]
 database = SQLAlchemy(app)
 
 
-def _utc_now():
+def _utc_now() -> datetime:
     """Return current UTC time with timezone awareness."""
     return datetime.now(timezone.utc)
 
@@ -209,11 +213,11 @@ with app.app_context():
         conn.close()
 
 
-def login_required(func):
+def login_required(func: Callable[..., Any]) -> Callable[..., Any]:
     """Redirect to login when user session is missing."""
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         if "user" not in session:
             return redirect(url_for("login"))
         return func(*args, **kwargs)
@@ -268,7 +272,7 @@ def _fetch_manager_name(access_token: str) -> str:
 
 @app.route("/")
 @login_required
-def index():
+def index() -> str:
     """List all entries sorted by creation time."""
     session_user = session.get("user", {})
     name = session_user.get("name", "")
@@ -315,7 +319,7 @@ def index():
 
 @app.route("/entries/new", methods=["GET"])
 @login_required
-def new_entry():
+def new_entry() -> Union[str, Response]:
     """Display the creation form, redirecting to edit if an entry exists."""
 
     session_user = session.get("user", {})
@@ -341,7 +345,7 @@ def _validate_choice(value: str, choices: list[str]) -> bool:
     return value in choices
 
 
-def _can_access_entry(entry: Entry, session_user: dict) -> bool:
+def _can_access_entry(entry: Entry, session_user: dict[str, Any]) -> bool:
     """Return True if session user owns the entry (manager-only access is denied)."""
 
     name = (session_user.get("name") or "").lower()
@@ -350,7 +354,7 @@ def _can_access_entry(entry: Entry, session_user: dict) -> bool:
     return bool(name and entry_owner and name == entry_owner)
 
 
-def _can_manage_entry(entry: Entry, session_user: dict) -> bool:
+def _can_manage_entry(entry: Entry, session_user: dict[str, Any]) -> bool:
     """Return True if session user is the manager for the given entry."""
 
     session_name = (session_user.get("name") or "").lower()
@@ -358,7 +362,7 @@ def _can_manage_entry(entry: Entry, session_user: dict) -> bool:
     return bool(session_name and manager_name and session_name == manager_name)
 
 
-def _can_manage_final(final_entry: FinalEntry, session_user: dict) -> bool:
+def _can_manage_final(final_entry: FinalEntry, session_user: dict[str, Any]) -> bool:
     """Return True if session user is the manager of the linked self assessment."""
 
     session_name = (session_user.get("name") or "").lower()
@@ -368,7 +372,7 @@ def _can_manage_final(final_entry: FinalEntry, session_user: dict) -> bool:
 
 @app.route("/entries", methods=["POST"])
 @login_required
-def create_entry():
+def create_entry() -> Response:
     """Create a new entry from form data."""
     session_user = session.get("user", {})
     name = session_user.get("name", "")
@@ -445,7 +449,7 @@ def create_entry():
         )
         return redirect(url_for("index"))
 
-    entry = Entry(
+    entry = Entry(  # type: ignore[call-arg]
         name=name,
         email=email,
         manager_name=manager_name,
@@ -474,7 +478,7 @@ def create_entry():
 
 @app.route("/entries/<int:entry_id>/edit", methods=["GET", "POST"])
 @login_required
-def edit_entry(entry_id):
+def edit_entry(entry_id: int) -> Union[str, Response]:
     """Edit an existing entry."""
     entry = Entry.query.get_or_404(entry_id)
 
@@ -580,7 +584,7 @@ def edit_entry(entry_id):
 
 @app.route("/entries/<int:entry_id>/delete", methods=["POST"])
 @login_required
-def delete_entry(entry_id):
+def delete_entry(entry_id: int) -> Response:
     """Delete an existing entry."""
     entry = Entry.query.get_or_404(entry_id)
     session_user = session.get("user", {})
@@ -595,7 +599,7 @@ def delete_entry(entry_id):
 
 @app.route("/entries/<int:entry_id>/finalize", methods=["POST"])
 @login_required
-def finalize_entry(entry_id):
+def finalize_entry(entry_id: int) -> Response:
     """Create a manager-owned final assessment from an employee self assessment."""
 
     entry = Entry.query.get_or_404(entry_id)
@@ -609,7 +613,7 @@ def finalize_entry(entry_id):
         flash("A final assessment already exists for this entry.", "info")
         return redirect(url_for("edit_final_entry", final_id=existing_final.id))
 
-    final_entry = FinalEntry(
+    final_entry = FinalEntry(  # type: ignore[call-arg]
         source_entry_id=entry.id,
         name=entry.name,
         email=entry.email,
@@ -640,7 +644,7 @@ def finalize_entry(entry_id):
 
 @app.route("/final_entries/<int:final_id>/edit", methods=["GET", "POST"])
 @login_required
-def edit_final_entry(final_id):
+def edit_final_entry(final_id: int) -> Union[str, Response]:
     """Edit a final assessment (manager only)."""
 
     final_entry = FinalEntry.query.get_or_404(final_id)
@@ -725,7 +729,7 @@ def edit_final_entry(final_id):
 
 @app.route("/final_entries/<int:final_id>/delete", methods=["POST"])
 @login_required
-def delete_final_entry(final_id):
+def delete_final_entry(final_id: int) -> Response:
     """Delete a final assessment."""
     final_entry = FinalEntry.query.get_or_404(final_id)
     session_user = session.get("user", {})
@@ -739,7 +743,7 @@ def delete_final_entry(final_id):
 
 
 @app.route("/login")
-def login():
+def login() -> Response:
     """Start Microsoft sign-in by redirecting to Azure AD."""
 
     if not CLIENT_SECRET:
@@ -754,7 +758,7 @@ def login():
 
 
 @app.route(REDIRECT_PATH)
-def authorized():
+def authorized() -> Response:
     """Process the redirect from Azure AD and establish session."""
 
     state = request.args.get("state")
@@ -778,8 +782,8 @@ def authorized():
         return redirect(url_for("index"))
 
     claims = result.get("id_token_claims", {})
-    access_token = result.get("access_token")
-    manager_name = _fetch_manager_name(access_token)
+    access_token = result.get("access_token", "")
+    manager_name = _fetch_manager_name(access_token or "")
     user_name = claims.get("name")
     user_email = claims.get("preferred_username")
 
@@ -801,7 +805,7 @@ def authorized():
 
 
 @app.route("/logout")
-def logout():
+def logout() -> Response:
     """Clear local session and sign out of Azure AD."""
 
     session.clear()

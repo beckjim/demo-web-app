@@ -1,10 +1,10 @@
 ## What this app is
-- Single Flask app in [app.py](app.py) with SQLite via SQLAlchemy; one table `Entry` holds form submissions including objective/ability ratings and comments.
+- Single Flask app in [src/employee_dialogue/\_\_init\_\_.py](src/employee_dialogue/__init__.py) with SQLite via SQLAlchemy; one table `Entry` holds form submissions including objective/ability ratings and comments.
 - Microsoft Entra (Azure AD) login is mandatory for all routes except `/login`, `/logout`, and the auth redirect; session data is placed under `session['user']` with `name`, `email`, `oid`, `manager_name`.
 - Manager field is prefetched from Microsoft Graph `/me/manager` using `Directory.Read.All`; failures are silent and treated as optional.
 
 ## Running and environment
-- Use `uv` workflow: `pip install uv`, `uv venv`, activate, `uv sync`, then `uv run flask --app app run --debug` (see [README.md](README.md)).
+- Use `uv` workflow: `pip install uv`, `uv venv`, activate, `uv sync`, then `uv run flask --app employee_dialogue run --debug` (see [README.md](README.md)).
 - Required secrets: `AZURE_AD_CLIENT_SECRET` (needed for login), `SECRET_KEY` (Flask session). `.env` is supported via `python-dotenv`.
 - Database file lives at `app.db` in the repo root; schema auto-creates on startup. Legacy columns are added in-place via PRAGMA/ALTER logic inside `with app.app_context():`.
 
@@ -19,7 +19,7 @@
 - `login_required` decorator guards create/edit/delete/index; reuse it for any new routes requiring auth.
 
 ## UI patterns
-- Templates in [templates/base.html](templates/base.html), [templates/index.html](templates/index.html), [templates/edit.html](templates/edit.html).
+- Templates in [src/employee_dialogue/templates/base.html](src/employee_dialogue/templates/base.html), [src/employee_dialogue/templates/index.html](src/employee_dialogue/templates/index.html), [src/employee_dialogue/templates/edit.html](src/employee_dialogue/templates/edit.html).
 - New submissions use current session user for name/email (readonly). Manager is readonly on edit and optional on create; keep that behavior unless explicitly changing business rules.
 - Entries list newest-first by `created_at`; edit/delete are simple links and POST form respectively.
 

@@ -2,15 +2,15 @@
 
 import pytest
 
-from app import ABILITY_CHOICES
-from app import OBJECTIVE_CHOICES
-from app import Entry
-from app import FinalEntry
-from app import _can_access_entry
-from app import _can_manage_entry
-from app import _validate_choice
-from app import app
-from app import database
+from employee_dialogue import ABILITY_CHOICES
+from employee_dialogue import OBJECTIVE_CHOICES
+from employee_dialogue import Entry
+from employee_dialogue import FinalEntry
+from employee_dialogue import _can_access_entry
+from employee_dialogue import _can_manage_entry
+from employee_dialogue import _validate_choice
+from employee_dialogue import app
+from employee_dialogue import database
 
 
 @pytest.fixture

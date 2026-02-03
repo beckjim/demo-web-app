@@ -9,9 +9,7 @@ RUN pip install --no-cache-dir uv && apt-get update && apt-get install -y openss
 
 # Copy project files
 COPY pyproject.toml ./
-COPY app.py ./
-COPY templates/ ./templates/
-COPY static/ ./static/
+COPY src/ ./src/
 
 # Install dependencies
 RUN uv pip install --system -r pyproject.toml
@@ -25,15 +23,15 @@ RUN openssl req -x509 -newkey rsa:4096 -nodes -out certs/cert.pem -keyout certs/
 
 # Create entrypoint script to run both HTTP and HTTPS
 RUN echo '#!/bin/bash\n\
-gunicorn --bind 0.0.0.0:5000 --workers 2 --worker-class sync --timeout 120 --access-logfile - --error-logfile - app:app &\n\
-gunicorn --bind 0.0.0.0:443 --certfile certs/cert.pem --keyfile certs/key.pem --workers 2 --worker-class sync --timeout 120 --access-logfile - --error-logfile - app:app\n\
+gunicorn --bind 0.0.0.0:5000 --workers 2 --worker-class sync --timeout 120 --access-logfile - --error-logfile - "employee_dialogue:app" &\n\
+gunicorn --bind 0.0.0.0:443 --certfile certs/cert.pem --keyfile certs/key.pem --workers 2 --worker-class sync --timeout 120 --access-logfile - --error-logfile - "employee_dialogue:app"\n\
 ' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Expose ports 5000 and 443
 EXPOSE 5000 443
 
 # Set environment variables
-ENV FLASK_APP=app
+ENV FLASK_APP=employee_dialogue
 ENV PYTHONUNBUFFERED=1
 
 # Run both HTTP and HTTPS servers

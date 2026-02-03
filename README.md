@@ -22,7 +22,7 @@ SECRET_KEY=change_me_in_prod
 
 ## Run
 ```bash
-uv run flask --app app run --debug
+uv run flask --app employee_dialogue run --debug
 ```
 App will start on http://127.0.0.1:5000.
 

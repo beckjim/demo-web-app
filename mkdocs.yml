@@ -1,0 +1,70 @@
+site_name: Employee Dialogue
+site_description: "Performance review self-assessments and manager evaluations with Microsoft 365 authentication"
+site_author: "Your Name"
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Installation: installation.md
+  - Configuration: configuration.md
+  - Usage:
+      - Creating Entries: usage/creating-entries.md
+      - Managing Entries: usage/managing-entries.md
+      - Manager Workflow: usage/manager-workflow.md
+  - Architecture:
+      - Project Structure: architecture/structure.md
+      - Data Model: architecture/data-model.md
+      - Authentication: architecture/authentication.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Testing: development/testing.md
+      - Building: development/building.md
+  - API Reference: api.md
+  - Deployment: deployment.md
+  - FAQ: faq.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - pymdownx.arithmatex
+  - pymdownx.emoji
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.tasklist
+  - toc:
+      permalink: true
+
+copyright: Copyright &copy; 2026 - Employee Dialogue Project

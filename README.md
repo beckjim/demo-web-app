@@ -43,6 +43,35 @@ App will start on http://127.0.0.1:5000.
 - SQLite database stored at app.db in project root
 - Microsoft 365 sign-in required for form access
 
+## Documentation
+
+Comprehensive documentation is available in the `docs/` folder and generated with mkdocs.
+
+### View documentation locally
+
+```bash
+# Install mkdocs
+pip install mkdocs mkdocs-material
+
+# Start local documentation server
+mkdocs serve
+```
+
+Documentation will be available at http://localhost:8000
+
+### Documentation structure
+- **[Getting Started](docs/getting-started.md)** - Quick 5-step setup guide
+- **[Installation](docs/installation.md)** - Three installation methods
+- **[Configuration](docs/configuration.md)** - Environment and Azure AD setup
+- **[Usage Guides](docs/usage/)** - How to use the application
+- **[Architecture](docs/architecture/)** - System design and data model
+- **[Development](docs/development/)** - Contributing and testing
+- **[API Reference](docs/api.md)** - REST API endpoints
+- **[Deployment](docs/deployment.md)** - Production deployment options
+- **[FAQ](docs/faq.md)** - Frequently asked questions
+
+See [DOCUMENTATION.md](DOCUMENTATION.md) for full documentation setup guide.
+
 ## Testing
 The application includes comprehensive unit tests. See [TESTING.md](TESTING.md) for details.
 

@@ -26,6 +26,10 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Documentation build output
+site/
+docs/_build/
+
 # Local data and databases
 app.db
 instance/

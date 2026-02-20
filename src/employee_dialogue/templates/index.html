@@ -1,14 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="tabs" data-tab-root>
-  {% if managed_rows %}
+  {% if managed_rows or is_program_manager %}
   <div class="tab-list" role="tablist" aria-label="Self assessment tabs">
+    {% if not is_program_manager %}
     <button class="tab-button active" aria-controls="tab-self" data-tab-target="tab-self">Your Self Assessment</button>
-    <button class="tab-button" aria-controls="tab-managed" data-tab-target="tab-managed">Managed Self
+    {% endif %}
+    <button class="tab-button {% if is_program_manager %}active{% endif %}" aria-controls="tab-managed" data-tab-target="tab-managed">Managed Self
       Assessments</button>
   </div>
   {% endif %}
   <div class="tab-panels">
+    {% if not is_program_manager %}
     <section id="tab-self" class="card tab-panel">
       <h2>Your Self Assessment</h2>
       {% if has_own_entry %}
@@ -75,8 +78,9 @@
       <p>No self assessment yet.</p>
       {% endif %}
     </section>
+    {% endif %}
 
-    {% if managed_rows %}
+    {% if managed_rows or is_program_manager %}
     <section id="tab-managed" class="card tab-panel">
       <h2>Managed Self Assessments</h2>
       <div class="actions" style="margin-bottom: 10px;">

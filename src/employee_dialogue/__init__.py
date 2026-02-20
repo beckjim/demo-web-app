@@ -421,6 +421,8 @@ def index() -> str:
     """List all entries sorted by creation time."""
     session_user = session.get("user", {})
     name = session_user.get("name", "")
+    program_manager_name = session_user.get("program_manager_name", "")
+    is_program_manager = bool(name and program_manager_name and name == program_manager_name)
     raw_refreshed_at = session_user.get("direct_reports_refreshed_at")
     if isinstance(raw_refreshed_at, str):
         try:
@@ -442,6 +444,17 @@ def index() -> str:
         .order_by(Entry.created_at.desc())
         .all()
         if name
+        else []
+    )
+
+    program_manager_entries = (
+        Entry.query.filter(
+            Entry.program_manager_name == name,
+            Entry.workflow_status.in_([STATUS_SUBMITTED, STATUS_APPROVED]),
+        )
+        .order_by(Entry.created_at.desc())
+        .all()
+        if is_program_manager
         else []
     )
 
@@ -506,6 +519,24 @@ def index() -> str:
             }
         )
 
+    for entry in program_manager_entries:
+        if entry.id in seen_entry_ids:
+            continue
+        status_code = _managed_status(entry)
+        managed_rows.append(
+            {
+                "member_name": entry.name,
+                "member_email": entry.email,
+                "member_oid": "",
+                "entry": entry,
+                "status_code": status_code,
+                "status_label": STATUS_LABELS.get(status_code, STATUS_LABELS[STATUS_CREATED]),
+                "status_tooltip": STATUS_TOOLTIPS.get(status_code, ""),
+                "status_class": STATUS_CLASSES.get(status_code, "status-created"),
+                "timestamp_label": _managed_timestamp(entry),
+            }
+        )
+
     managed_rows.sort(key=lambda row: (row.get("member_name") or "").lower())
 
     return render_template(
@@ -518,6 +549,7 @@ def index() -> str:
         has_own_entry=bool(own_entry),
         current_name=name,
         team_refreshed_at=team_refreshed_at,
+        is_program_manager=is_program_manager,
         own_status_code=own_status_code,
         own_status_label=own_status_label,
         own_status_tooltip=own_status_tooltip,

@@ -42,7 +42,7 @@ package = true
 [tool.ruff]
 line-length = 100
 target-version = "py39"
-extend-exclude = ["venv", "__pycache__", ".git", ".pytest_cache", "*.egg-info"]
+extend-exclude = ["venv", ".venv", "__pycache__", ".git", ".pytest_cache", "*.egg-info", "**/node_modules", "**/.*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "C90", "B"]
@@ -72,7 +72,16 @@ markers = [
 
 [tool.pyright]
 include = ["src"]
-exclude = ["**/__pycache__", "**/.pytest_cache", "**/venv", "**/*.egg-info", "tests"]
+exclude = [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/venv",
+    "**/.venv",
+    "**/*.egg-info",
+    "**/node_modules",
+    "**/.*",
+    "tests",
+]
 pythonVersion = "3.9"
 pythonPlatform = "All"
 typeCheckingMode = "basic"

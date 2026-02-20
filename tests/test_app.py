@@ -4,11 +4,9 @@ import pytest
 
 from employee_dialogue import ABILITY_CHOICES
 from employee_dialogue import OBJECTIVE_CHOICES
-from employee_dialogue import STATUS_CREATED
 from employee_dialogue import STATUS_FINALIZED
 from employee_dialogue import Entry
 from employee_dialogue import _can_access_entry
-from employee_dialogue import _can_approve_entry
 from employee_dialogue import _can_manage_entry
 from employee_dialogue import _validate_choice
 from employee_dialogue import app

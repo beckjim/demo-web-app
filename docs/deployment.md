@@ -162,6 +162,9 @@ docker compose up -d
 docker compose logs -f web
 ```
 
+On container startup, the entrypoint performs a one-time app import to initialize/migrate the SQLite schema.
+It then sets `SKIP_DB_INIT=1` for Gunicorn worker processes to avoid concurrent schema initialization races.
+
 #### Production Docker Compose
 
 ```yaml

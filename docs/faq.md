@@ -301,7 +301,7 @@ mkdocs serve
 ### Where can I get help?
 
 1. Check this FAQ
-2. Read [Documentation](.)
+2. Read [Documentation](index.md)
 3. Search [GitHub Issues](https://github.com/beckjim/employee-dialogue/issues)
 4. Create new issue or discussion
 

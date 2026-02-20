@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir uv && apt-get update && apt-get install -y openss
 # Copy project files
 COPY pyproject.toml ./
 COPY src/ ./src/
+COPY docker-entrypoint.sh /app/entrypoint.sh
 
 # Install dependencies
 RUN uv pip install --system .
@@ -21,11 +22,7 @@ RUN mkdir -p instance certs
 RUN openssl req -x509 -newkey rsa:4096 -nodes -out certs/cert.pem -keyout certs/key.pem -days 365 \
     -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
 
-# Create entrypoint script to run both HTTP and HTTPS
-RUN echo '#!/bin/bash\n\
-gunicorn --bind 0.0.0.0:5000 --workers 2 --worker-class sync --timeout 120 --access-logfile - --error-logfile - "employee_dialogue:app" &\n\
-gunicorn --bind 0.0.0.0:443 --certfile certs/cert.pem --keyfile certs/key.pem --workers 2 --worker-class sync --timeout 120 --access-logfile - --error-logfile - "employee_dialogue:app"\n\
-' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Expose ports 5000 and 443
 EXPOSE 5000 443

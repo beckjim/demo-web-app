@@ -26,6 +26,14 @@ uv run flask --app employee_dialogue run --debug
 ```
 App will start on http://127.0.0.1:5000.
 
+## Run with Docker Compose
+```bash
+docker compose -f compose.yml up -d --build web
+```
+
+Container startup performs a one-time app import to initialize/migrate SQLite schema before Gunicorn workers are spawned.
+After that, `SKIP_DB_INIT=1` is set for worker processes to prevent concurrent schema initialization races.
+
 ### Azure AD / Microsoft 365 login
 1) In Entra ID, register a web app with redirect URI `http://127.0.0.1:5000/auth/redirect` (or `http://localhost:5000/auth/redirect` and keep the same in code).
 2) Create a client secret and set it locally: `set AZURE_AD_CLIENT_SECRET=<your_secret>` (PowerShell: `$env:AZURE_AD_CLIENT_SECRET="..."`).

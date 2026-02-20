@@ -43,6 +43,8 @@ SCOPES = ["User.Read", "Directory.Read.All"]
 
 database = SQLAlchemy(app)
 
+SKIP_DB_INIT = os.environ.get("SKIP_DB_INIT", "0") == "1"
+
 
 def _utc_now() -> datetime:
     """Return current UTC time with timezone awareness."""
@@ -163,79 +165,86 @@ class Entry(database.Model):
     updated_at = database.Column(database.DateTime, default=_utc_now, onupdate=_utc_now)
 
 
-with app.app_context():
-    conn = database.engine.raw_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA table_info(entry)")
-        existing_cols = {row[1] for row in cursor.fetchall()}
-        drop_message = "message" in existing_cols
+def _initialize_database() -> None:
+    """Create and migrate schema using lightweight SQLite ALTER logic."""
 
-        if drop_message:
-            cursor.execute("ALTER TABLE entry RENAME TO entry_old")
-            conn.commit()
+    with app.app_context():
+        conn = database.engine.raw_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(entry)")
+            existing_cols = {row[1] for row in cursor.fetchall()}
+            drop_message = "message" in existing_cols
 
-        database.create_all()
+            if drop_message:
+                cursor.execute("ALTER TABLE entry RENAME TO entry_old")
+                conn.commit()
 
-        cursor.execute("PRAGMA table_info(entry)")
-        existing_cols = {row[1] for row in cursor.fetchall()}
-        add_cols = [
-            ("manager_name", "TEXT", "''"),
-            ("objective_rating", "TEXT", "''"),
-            ("objective_comment", "TEXT", "''"),
-            ("manager_objective_comment", "TEXT", "''"),
-            ("technical_rating", "TEXT", "''"),
-            ("project_rating", "TEXT", "''"),
-            ("methodology_rating", "TEXT", "''"),
-            ("abilities_comment", "TEXT", "''"),
-            ("manager_abilities_comment", "TEXT", "''"),
-            ("efficiency_collaboration", "TEXT", "''"),
-            ("efficiency_ownership", "TEXT", "''"),
-            ("efficiency_resourcefulness", "TEXT", "''"),
-            ("efficiency_comment", "TEXT", "''"),
-            ("manager_efficiency_comment", "TEXT", "''"),
-            ("conduct_mutual_trust", "TEXT", "''"),
-            ("conduct_proactivity", "TEXT", "''"),
-            ("conduct_leadership", "TEXT", "''"),
-            ("conduct_comment", "TEXT", "''"),
-            ("general_comments", "TEXT", "''"),
-            ("goals_2026", "TEXT", "''"),
-            ("manager_general_comments", "TEXT", "''"),
-            ("feedback_received", "TEXT", "''"),
-            ("program_manager_name", "TEXT", "''"),
-            ("workflow_status", "TEXT", f"'{STATUS_CREATED}'"),
-        ]
-        for col_name, col_type, default_val in add_cols:
-            if col_name not in existing_cols:
-                cursor.execute(
-                    "ALTER TABLE entry ADD COLUMN "
-                    f"{col_name} {col_type} NOT NULL DEFAULT {default_val}"
-                )
+            database.create_all()
 
-        cursor.execute(
-            "UPDATE entry SET workflow_status = ? WHERE workflow_status IS NULL OR workflow_status = ''",
-            (STATUS_CREATED,),
-        )
+            cursor.execute("PRAGMA table_info(entry)")
+            existing_cols = {row[1] for row in cursor.fetchall()}
+            add_cols = [
+                ("manager_name", "TEXT", "''"),
+                ("objective_rating", "TEXT", "''"),
+                ("objective_comment", "TEXT", "''"),
+                ("manager_objective_comment", "TEXT", "''"),
+                ("technical_rating", "TEXT", "''"),
+                ("project_rating", "TEXT", "''"),
+                ("methodology_rating", "TEXT", "''"),
+                ("abilities_comment", "TEXT", "''"),
+                ("manager_abilities_comment", "TEXT", "''"),
+                ("efficiency_collaboration", "TEXT", "''"),
+                ("efficiency_ownership", "TEXT", "''"),
+                ("efficiency_resourcefulness", "TEXT", "''"),
+                ("efficiency_comment", "TEXT", "''"),
+                ("manager_efficiency_comment", "TEXT", "''"),
+                ("conduct_mutual_trust", "TEXT", "''"),
+                ("conduct_proactivity", "TEXT", "''"),
+                ("conduct_leadership", "TEXT", "''"),
+                ("conduct_comment", "TEXT", "''"),
+                ("general_comments", "TEXT", "''"),
+                ("goals_2026", "TEXT", "''"),
+                ("manager_general_comments", "TEXT", "''"),
+                ("feedback_received", "TEXT", "''"),
+                ("program_manager_name", "TEXT", "''"),
+                ("workflow_status", "TEXT", f"'{STATUS_CREATED}'"),
+            ]
+            for col_name, col_type, default_val in add_cols:
+                if col_name not in existing_cols:
+                    cursor.execute(
+                        "ALTER TABLE entry ADD COLUMN "
+                        f"{col_name} {col_type} NOT NULL DEFAULT {default_val}"
+                    )
 
-        if drop_message:
             cursor.execute(
-                """
-                INSERT INTO entry (
-                    id, name, email, manager_name, objective_rating,
-                    objective_comment, technical_rating, project_rating,
-                    methodology_rating, created_at, updated_at
-                )
-                SELECT
-                    id, name, email, manager_name, objective_rating,
-                    objective_comment, technical_rating, project_rating,
-                    methodology_rating, created_at, updated_at
-                FROM entry_old
-                """
+                "UPDATE entry SET workflow_status = ? WHERE workflow_status IS NULL OR workflow_status = ''",
+                (STATUS_CREATED,),
             )
-            cursor.execute("DROP TABLE entry_old")
-        conn.commit()
-    finally:
-        conn.close()
+
+            if drop_message:
+                cursor.execute(
+                    """
+                    INSERT INTO entry (
+                        id, name, email, manager_name, objective_rating,
+                        objective_comment, technical_rating, project_rating,
+                        methodology_rating, created_at, updated_at
+                    )
+                    SELECT
+                        id, name, email, manager_name, objective_rating,
+                        objective_comment, technical_rating, project_rating,
+                        methodology_rating, created_at, updated_at
+                    FROM entry_old
+                    """
+                )
+                cursor.execute("DROP TABLE entry_old")
+            conn.commit()
+        finally:
+            conn.close()
+
+
+if not SKIP_DB_INIT:
+    _initialize_database()
 
 
 def login_required(func: Callable[..., Any]) -> Callable[..., Any]:

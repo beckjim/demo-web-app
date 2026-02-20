@@ -12,7 +12,7 @@ COPY pyproject.toml ./
 COPY src/ ./src/
 
 # Install dependencies
-RUN uv pip install --system -r pyproject.toml
+RUN uv pip install --system .
 
 # Create instance directory for SQLite database and certs directory
 RUN mkdir -p instance certs

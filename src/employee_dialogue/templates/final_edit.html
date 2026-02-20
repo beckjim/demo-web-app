@@ -3,7 +3,7 @@
 <section class="card">
     <h2>Edit Final Assessment</h2>
     <p style="margin-top:0; color:#6b7280;">This assessment is owned by the manager. Only the manager can update it.</p>
-    <form method="post" action="{{ url_for('edit_final_entry', final_id=entry.id) }}">
+    <form method="post" action="{{ url_for('edit_manager_entry', entry_id=entry.id) }}">
         <div>
             <label for="name">Employee</label>
             <input id="name" name="name" value="{{ entry.name }}" readonly required>
@@ -250,7 +250,7 @@
         <div class="actions">
             <button type="submit">Save Final Assessment</button>
             <a class="button-link" href="{{ url_for('index') }}">Back to Assessments</a>
-            <form method="post" action="{{ url_for('delete_final_entry', final_id=entry.id) }}"
+            <form method="post" action="{{ url_for('delete_entry', entry_id=entry.id) }}"
                 onsubmit="return confirm('Delete this final assessment?');">
                 <button class="secondary" type="submit">Delete</button>
             </form>

@@ -190,6 +190,49 @@
       opacity: 0.8;
     }
 
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      text-transform: capitalize;
+      white-space: nowrap;
+    }
+
+    .status-not-created {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+
+    .status-created {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+
+    .status-finalized {
+      background: #dcfce7;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    .status-submitted {
+      background: #ffedd5;
+      color: #9a3412;
+      border-color: #fed7aa;
+    }
+
+    .status-approved {
+      background: #15803d;
+      color: #f0fdf4;
+      border-color: #14532d;
+    }
+
     button,
     .button-link {
       background: var(--accent);
@@ -314,6 +357,33 @@
       display: block;
     }
 
+    .managed-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .managed-table th,
+    .managed-table td {
+      border: 1px solid var(--border);
+      padding: 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .managed-table th {
+      background: #f9fafb;
+    }
+
+    .managed-name-button {
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .managed-detail-row td {
+      background: #fcfcfd;
+    }
+
     .user-display-name {
       cursor: pointer;
       padding: 4px 8px;
@@ -381,6 +451,7 @@
     {% if session.get('user') %}
     <p><strong>Email:</strong><br>{{ session['user']['email'] }}</p>
     <p><strong>Manager:</strong><br>{{ session['user']['manager_name'] or 'Not available' }}</p>
+    <p><strong>Program manager:</strong><br>{{ session['user']['program_manager_name'] or 'Not available' }}</p>
     {% endif %}
   </div>
   <script>

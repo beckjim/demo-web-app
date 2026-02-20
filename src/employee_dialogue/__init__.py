@@ -2,13 +2,15 @@
 
 import os
 import uuid
-from typing import Any
-from typing import Callable
-from typing import Union
 
 from datetime import datetime
 from datetime import timezone
 from functools import wraps
+from typing import Any
+from typing import Callable
+from typing import Union
+from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfoNotFoundError
 
 import msal
 import requests
@@ -47,6 +49,38 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+try:
+    GERMAN_TZ = ZoneInfo("Europe/Berlin")
+except ZoneInfoNotFoundError:
+    app.logger.warning(
+        "Timezone data not available; falling back to UTC. Install tzdata for Europe/Berlin."
+    )
+    GERMAN_TZ = timezone.utc
+
+
+def _format_german_time(value: Union[datetime, None]) -> str:
+    """Format a datetime in German timezone with offset info."""
+
+    if value is None:
+        return "N/A"
+
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+
+    local_time = value.astimezone(GERMAN_TZ)
+    offset = local_time.strftime("%z")
+    if offset:
+        offset = f"{offset[:3]}:{offset[3:]}"
+    return f"{local_time:%Y-%m-%d %H:%M} Europe/Berlin (UTC{offset})"
+
+
+@app.template_filter("german_time")
+def german_time_filter(value: Union[datetime, None]) -> str:
+    """Jinja filter for German timezone timestamp formatting."""
+
+    return _format_german_time(value)
+
+
 OBJECTIVE_CHOICES = [
     "Exceeded objective",
     "Achieved objective",
@@ -62,6 +96,36 @@ ABILITY_CHOICES = [
     "N/A",
 ]
 
+STATUS_NOT_CREATED = "not_created_yet"
+STATUS_CREATED = "created"
+STATUS_FINALIZED = "finalized_with_manager"
+STATUS_SUBMITTED = "submitted_to_program_manager"
+STATUS_APPROVED = "approved_by_program_manager"
+
+STATUS_LABELS = {
+    STATUS_NOT_CREATED: "not created yet",
+    STATUS_CREATED: "created",
+    STATUS_FINALIZED: "finalized with manager",
+    STATUS_SUBMITTED: "submitted to program manager",
+    STATUS_APPROVED: "approved by program manager",
+}
+
+STATUS_TOOLTIPS = {
+    STATUS_NOT_CREATED: "The team member has not created a self assessment yet.",
+    STATUS_CREATED: "The self assessment is created and waiting for manager finalization.",
+    STATUS_FINALIZED: "The manager finalized the assessment and can now submit it to the program manager.",
+    STATUS_SUBMITTED: "The finalized assessment was submitted to the program manager and is locked for editing.",
+    STATUS_APPROVED: "The program manager approved the submitted assessment. Workflow is complete.",
+}
+
+STATUS_CLASSES = {
+    STATUS_NOT_CREATED: "status-not-created",
+    STATUS_CREATED: "status-created",
+    STATUS_FINALIZED: "status-finalized",
+    STATUS_SUBMITTED: "status-submitted",
+    STATUS_APPROVED: "status-approved",
+}
+
 
 class Entry(database.Model):
     """Simple submission entry model."""
@@ -70,34 +134,6 @@ class Entry(database.Model):
     name = database.Column(database.String(120), nullable=False)
     email = database.Column(database.String(120), nullable=False)
     manager_name = database.Column(database.String(120), nullable=True, default="")
-    objective_rating = database.Column(database.String(60), nullable=False)
-    objective_comment = database.Column(database.Text, nullable=False)
-    technical_rating = database.Column(database.String(40), nullable=False)
-    project_rating = database.Column(database.String(40), nullable=False)
-    methodology_rating = database.Column(database.String(40), nullable=False)
-    abilities_comment = database.Column(database.Text, nullable=False, default="")
-    efficiency_collaboration = database.Column(database.String(40), nullable=False, default="")
-    efficiency_ownership = database.Column(database.String(40), nullable=False, default="")
-    efficiency_resourcefulness = database.Column(database.String(40), nullable=False, default="")
-    efficiency_comment = database.Column(database.Text, nullable=False, default="")
-    conduct_mutual_trust = database.Column(database.String(40), nullable=False, default="")
-    conduct_proactivity = database.Column(database.String(40), nullable=False, default="")
-    conduct_leadership = database.Column(database.String(40), nullable=False, default="")
-    conduct_comment = database.Column(database.Text, nullable=False, default="")
-    general_comments = database.Column(database.Text, nullable=False, default="")
-    feedback_received = database.Column(database.String(10), nullable=False, default="")
-    created_at = database.Column(database.DateTime, default=_utc_now)
-    updated_at = database.Column(database.DateTime, default=_utc_now, onupdate=_utc_now)
-
-
-class FinalEntry(database.Model):
-    """Manager-owned final assessment linked to an employee's self assessment."""
-
-    id = database.Column(database.Integer, primary_key=True)
-    source_entry_id = database.Column(database.Integer, nullable=False)
-    name = database.Column(database.String(120), nullable=False)
-    email = database.Column(database.String(120), nullable=False)
-    manager_name = database.Column(database.String(120), nullable=False, default="")
     objective_rating = database.Column(database.String(60), nullable=False)
     objective_comment = database.Column(database.Text, nullable=False)
     manager_objective_comment = database.Column(database.Text, nullable=False, default="")
@@ -119,6 +155,10 @@ class FinalEntry(database.Model):
     goals_2026 = database.Column(database.Text, nullable=False, default="")
     manager_general_comments = database.Column(database.Text, nullable=False, default="")
     feedback_received = database.Column(database.String(10), nullable=False, default="")
+    program_manager_name = database.Column(database.String(120), nullable=False, default="")
+    workflow_status = database.Column(
+        database.String(40), nullable=False, default=STATUS_CREATED
+    )
     created_at = database.Column(database.DateTime, default=_utc_now)
     updated_at = database.Column(database.DateTime, default=_utc_now, onupdate=_utc_now)
 
@@ -143,20 +183,27 @@ with app.app_context():
             ("manager_name", "TEXT", "''"),
             ("objective_rating", "TEXT", "''"),
             ("objective_comment", "TEXT", "''"),
+            ("manager_objective_comment", "TEXT", "''"),
             ("technical_rating", "TEXT", "''"),
             ("project_rating", "TEXT", "''"),
             ("methodology_rating", "TEXT", "''"),
             ("abilities_comment", "TEXT", "''"),
+            ("manager_abilities_comment", "TEXT", "''"),
             ("efficiency_collaboration", "TEXT", "''"),
             ("efficiency_ownership", "TEXT", "''"),
             ("efficiency_resourcefulness", "TEXT", "''"),
             ("efficiency_comment", "TEXT", "''"),
+            ("manager_efficiency_comment", "TEXT", "''"),
             ("conduct_mutual_trust", "TEXT", "''"),
             ("conduct_proactivity", "TEXT", "''"),
             ("conduct_leadership", "TEXT", "''"),
             ("conduct_comment", "TEXT", "''"),
             ("general_comments", "TEXT", "''"),
+            ("goals_2026", "TEXT", "''"),
+            ("manager_general_comments", "TEXT", "''"),
             ("feedback_received", "TEXT", "''"),
+            ("program_manager_name", "TEXT", "''"),
+            ("workflow_status", "TEXT", f"'{STATUS_CREATED}'"),
         ]
         for col_name, col_type, default_val in add_cols:
             if col_name not in existing_cols:
@@ -165,32 +212,10 @@ with app.app_context():
                     f"{col_name} {col_type} NOT NULL DEFAULT {default_val}"
                 )
 
-        cursor.execute("PRAGMA table_info(final_entry)")
-        final_existing_cols = {row[1] for row in cursor.fetchall()}
-        final_add_cols = [
-            ("manager_objective_comment", "TEXT", "''"),
-            ("abilities_comment", "TEXT", "''"),
-            ("manager_abilities_comment", "TEXT", "''"),
-            ("efficiency_collaboration", "TEXT", "''"),
-            ("efficiency_ownership", "TEXT", "''"),
-            ("efficiency_resourcefulness", "TEXT", "''"),
-            ("efficiency_comment", "TEXT", "''"),
-            ("conduct_mutual_trust", "TEXT", "''"),
-            ("conduct_proactivity", "TEXT", "''"),
-            ("conduct_leadership", "TEXT", "''"),
-            ("conduct_comment", "TEXT", "''"),
-            ("general_comments", "TEXT", "''"),
-            ("goals_2026", "TEXT", "''"),
-            ("manager_efficiency_comment", "TEXT", "''"),
-            ("manager_general_comments", "TEXT", "''"),
-            ("feedback_received", "TEXT", "''"),
-        ]
-        for col_name, col_type, default_val in final_add_cols:
-            if col_name not in final_existing_cols:
-                cursor.execute(
-                    "ALTER TABLE final_entry ADD COLUMN "
-                    f"{col_name} {col_type} NOT NULL DEFAULT {default_val}"
-                )
+        cursor.execute(
+            "UPDATE entry SET workflow_status = ? WHERE workflow_status IS NULL OR workflow_status = ''",
+            (STATUS_CREATED,),
+        )
 
         if drop_message:
             cursor.execute(
@@ -241,33 +266,153 @@ def _redirect_uri() -> str:
     return url_for("authorized", _external=True)
 
 
-def _fetch_manager_name(access_token: str) -> str:
-    """Return the manager display name from Microsoft Graph if available."""
+def _graph_display_name(data: Any) -> str:
+    """Return a user-friendly name from a Microsoft Graph user payload."""
 
-    if not access_token:
+    if not isinstance(data, dict):
         return ""
+    return data.get("displayName") or data.get("mail") or data.get("userPrincipalName") or ""
+
+
+def _graph_get(url: str, access_token: str) -> Union[requests.Response, None]:
+    """Issue a Microsoft Graph GET request with standard headers and timeout."""
 
     try:
-        response = requests.get(
-            "https://graph.microsoft.com/v1.0/me/manager",
+        return requests.get(
+            url,
             headers={"Authorization": f"Bearer {access_token}"},
             timeout=5,
         )
+    except Exception:  # pylint: disable=broad-except
+        app.logger.exception("Error while calling Graph URL: %s", url)
+        return None
 
-        if response.status_code == 200:
-            data = response.json()
-            return (
-                data.get("displayName") or data.get("mail") or data.get("userPrincipalName") or ""
-            )
+
+def _fetch_program_manager_name(access_token: str, manager_id: Any, manager_name: str) -> str:
+    """Walk up the manager chain and return the organization-head display name."""
+
+    current_manager_id = manager_id if isinstance(manager_id, str) else ""
+    program_manager_name = manager_name
+    visited_ids = set()
+
+    while current_manager_id and current_manager_id not in visited_ids:
+        visited_ids.add(current_manager_id)
+        hierarchy_response = _graph_get(
+            f"https://graph.microsoft.com/v1.0/users/{current_manager_id}/manager",
+            access_token,
+        )
+
+        if hierarchy_response is None:
+            break
+
+        if hierarchy_response.status_code == 404:
+            break
+
+        if hierarchy_response.status_code != 200:
+            app.logger.warning("Program manager lookup failed: %s", hierarchy_response.text)
+            break
+
+        hierarchy_data = hierarchy_response.json()
+        higher_manager_name = _graph_display_name(hierarchy_data)
+        if higher_manager_name:
+            program_manager_name = higher_manager_name
+
+        next_manager_id = hierarchy_data.get("id") if isinstance(hierarchy_data, dict) else None
+        if not isinstance(next_manager_id, str):
+            break
+        current_manager_id = next_manager_id
+
+    return program_manager_name
+
+
+def _fetch_manager_hierarchy(access_token: str) -> tuple[str, str]:
+    """Return direct manager and organization-head names from Microsoft Graph."""
+
+    if not access_token:
+        return "", ""
+
+    response = _graph_get("https://graph.microsoft.com/v1.0/me/manager", access_token)
+    if response is None:
+        return "", ""
+
+    if response.status_code == 404:
+        return "", ""
+
+    if response.status_code != 200:
+        app.logger.warning("Manager lookup failed: %s", response.text)
+        return "", ""
+
+    data = response.json()
+    manager_name = _graph_display_name(data)
+    manager_id = data.get("id") if isinstance(data, dict) else None
+    program_manager_name = _fetch_program_manager_name(access_token, manager_id, manager_name)
+    return manager_name, program_manager_name
+
+
+def _fetch_direct_reports(access_token: str) -> list[dict[str, str]]:
+    """Return direct reports for the current user from Microsoft Graph."""
+
+    if not access_token:
+        return []
+
+    reports: list[dict[str, str]] = []
+    next_url = (
+        "https://graph.microsoft.com/v1.0/me/directReports"
+        "?$select=id,displayName,mail,userPrincipalName"
+    )
+
+    while next_url:
+        response = _graph_get(next_url, access_token)
+        if response is None:
+            return reports
 
         if response.status_code == 404:
-            return ""
+            return []
 
-        app.logger.warning("Manager lookup failed: %s", response.text)
-        return ""
-    except Exception:  # pylint: disable=broad-except
-        app.logger.exception("Error while fetching manager from Graph")
-        return ""
+        if response.status_code != 200:
+            app.logger.warning("Direct reports lookup failed: %s", response.text)
+            return reports
+
+        data = response.json()
+        values = data.get("value", []) if isinstance(data, dict) else []
+
+        for item in values:
+            if not isinstance(item, dict):
+                continue
+            display_name = _graph_display_name(item)
+            if not display_name:
+                continue
+            reports.append(
+                {
+                    "oid": item.get("id") or "",
+                    "name": display_name,
+                    "email": item.get("mail") or item.get("userPrincipalName") or "",
+                }
+            )
+
+        next_url = data.get("@odata.nextLink", "") if isinstance(data, dict) else ""
+
+    return reports
+
+
+def _managed_status(entry: Union[Entry, None]) -> str:
+    """Return status code for a managed self-assessment lifecycle."""
+
+    if entry is None:
+        return STATUS_NOT_CREATED
+
+    candidate = (entry.workflow_status or "").strip()
+    if candidate in STATUS_LABELS:
+        return candidate
+    return STATUS_CREATED
+
+
+def _managed_timestamp(entry: Union[Entry, None]) -> str:
+    """Return a display timestamp for managed row state changes."""
+
+    if entry and entry.updated_at:
+        return _format_german_time(entry.updated_at)
+    return "N/A"
 
 
 @app.route("/")
@@ -276,6 +421,14 @@ def index() -> str:
     """List all entries sorted by creation time."""
     session_user = session.get("user", {})
     name = session_user.get("name", "")
+    raw_refreshed_at = session_user.get("direct_reports_refreshed_at")
+    if isinstance(raw_refreshed_at, str):
+        try:
+            team_refreshed_at = _format_german_time(datetime.fromisoformat(raw_refreshed_at))
+        except ValueError:
+            team_refreshed_at = raw_refreshed_at
+    else:
+        team_refreshed_at = "N/A"
     own_entries = (
         Entry.query.filter(func.lower(Entry.name) == name.lower())
         .order_by(Entry.created_at.desc())
@@ -293,28 +446,100 @@ def index() -> str:
     )
 
     own_entry = own_entries[0] if own_entries else None
+    direct_reports = session_user.get("direct_reports", [])
+    if not isinstance(direct_reports, list):
+        direct_reports = []
 
-    final_entries = (
-        FinalEntry.query.filter(FinalEntry.manager_name == name)
-        .order_by(FinalEntry.created_at.desc())
-        .all()
-        if name
-        else []
-    )
+    own_status_code = _managed_status(own_entry)
+    own_status_label = STATUS_LABELS.get(own_status_code, STATUS_LABELS[STATUS_CREATED])
+    own_status_tooltip = STATUS_TOOLTIPS.get(own_status_code, "")
+    own_timestamp_label = _managed_timestamp(own_entry)
 
-    final_lookup = {entry.source_entry_id: entry for entry in final_entries}
+    managed_by_email = {
+        (entry.email or "").lower(): entry for entry in managed_entries if (entry.email or "").strip()
+    }
+    managed_by_name = {
+        (entry.name or "").lower(): entry for entry in managed_entries if (entry.name or "").strip()
+    }
+
+    managed_rows: list[dict[str, Any]] = []
+    seen_entry_ids: set[int] = set()
+
+    for report in direct_reports:
+        report_name = report.get("name", "")
+        report_email = report.get("email", "")
+        report_oid = report.get("oid", "")
+        entry = managed_by_email.get(report_email.lower()) or managed_by_name.get(report_name.lower())
+        status_code = _managed_status(entry)
+        if entry:
+            seen_entry_ids.add(entry.id)
+
+        managed_rows.append(
+            {
+                "member_name": report_name,
+                "member_email": report_email,
+                "member_oid": report_oid,
+                "entry": entry,
+                "status_code": status_code,
+                "status_label": STATUS_LABELS.get(status_code, STATUS_LABELS[STATUS_CREATED]),
+                "status_tooltip": STATUS_TOOLTIPS.get(status_code, ""),
+                "status_class": STATUS_CLASSES.get(status_code, "status-created"),
+                "timestamp_label": _managed_timestamp(entry),
+            }
+        )
+
+    for entry in managed_entries:
+        if entry.id in seen_entry_ids:
+            continue
+        status_code = _managed_status(entry)
+        managed_rows.append(
+            {
+                "member_name": entry.name,
+                "member_email": entry.email,
+                "member_oid": "",
+                "entry": entry,
+                "status_code": status_code,
+                "status_label": STATUS_LABELS.get(status_code, STATUS_LABELS[STATUS_CREATED]),
+                "status_tooltip": STATUS_TOOLTIPS.get(status_code, ""),
+                "status_class": STATUS_CLASSES.get(status_code, "status-created"),
+                "timestamp_label": _managed_timestamp(entry),
+            }
+        )
+
+    managed_rows.sort(key=lambda row: (row.get("member_name") or "").lower())
 
     return render_template(
         "index.html",
         own_entries=own_entries,
         managed_entries=managed_entries,
+        managed_rows=managed_rows,
         objective_choices=OBJECTIVE_CHOICES,
         ability_choices=ABILITY_CHOICES,
         has_own_entry=bool(own_entry),
         current_name=name,
-        final_entries=final_entries,
-        final_lookup=final_lookup,
+        team_refreshed_at=team_refreshed_at,
+        own_status_code=own_status_code,
+        own_status_label=own_status_label,
+        own_status_tooltip=own_status_tooltip,
+        own_timestamp_label=own_timestamp_label,
+        own_status_class=STATUS_CLASSES.get(own_status_code, "status-created"),
+        status_not_created=STATUS_NOT_CREATED,
+        status_created=STATUS_CREATED,
+        status_finalized=STATUS_FINALIZED,
+        status_submitted=STATUS_SUBMITTED,
+        status_approved=STATUS_APPROVED,
+        status_classes=STATUS_CLASSES,
     )
+
+
+@app.route("/team/refresh", methods=["POST"])
+@login_required
+def refresh_team_members() -> Response:
+    """Refresh managed team members by re-running sign-in flow."""
+
+    session["post_login_redirect"] = url_for("index")
+    flash("Refreshing team members from Microsoft Entra...", "info")
+    return redirect(url_for("login", next=url_for("index")))
 
 
 @app.route("/entries/new", methods=["GET"])
@@ -362,12 +587,12 @@ def _can_manage_entry(entry: Entry, session_user: dict[str, Any]) -> bool:
     return bool(session_name and manager_name and session_name == manager_name)
 
 
-def _can_manage_final(final_entry: FinalEntry, session_user: dict[str, Any]) -> bool:
-    """Return True if session user is the manager of the linked self assessment."""
+def _can_approve_entry(entry: Entry, session_user: dict[str, Any]) -> bool:
+    """Return True if session user is the designated program manager."""
 
     session_name = (session_user.get("name") or "").lower()
-    manager_name = (final_entry.manager_name or "").lower()
-    return bool(session_name and manager_name and session_name == manager_name)
+    program_manager_name = (entry.program_manager_name or "").lower()
+    return bool(session_name and program_manager_name and session_name == program_manager_name)
 
 
 @app.route("/entries", methods=["POST"])
@@ -487,10 +712,17 @@ def edit_entry(entry_id: int) -> Union[str, Response]:
         flash("You are not allowed to access this entry", "error")
         return redirect(url_for("index"))
 
-    # Check if a final assessment already exists for this entry
-    final_entry = FinalEntry.query.filter_by(source_entry_id=entry_id).first()
-    if final_entry:
-        flash("Cannot edit this self-assessment because a final assessment has already been created.", "error")
+    # Check workflow status - only allow editing if created
+    workflow_status = entry.workflow_status or STATUS_CREATED
+    if workflow_status != STATUS_CREATED:
+        if workflow_status == STATUS_FINALIZED:
+            flash("Cannot edit this self-assessment because it has been finalized with manager.", "error")
+        elif workflow_status == STATUS_SUBMITTED:
+            flash("Cannot edit this self-assessment because it has been submitted to the program manager.", "error")
+        elif workflow_status == STATUS_APPROVED:
+            flash("Cannot edit this self-assessment because it has been approved by the program manager.", "error")
+        else:
+            flash("Cannot edit this self-assessment at this stage.", "error")
         return redirect(url_for("index"))
 
     if request.method == "POST":
@@ -591,6 +823,20 @@ def delete_entry(entry_id: int) -> Response:
     if not _can_access_entry(entry, session_user):
         flash("You are not allowed to access this entry", "error")
         return redirect(url_for("index"))
+
+    # Check workflow status - only allow deleting if created
+    workflow_status = entry.workflow_status or STATUS_CREATED
+    if workflow_status != STATUS_CREATED:
+        if workflow_status == STATUS_FINALIZED:
+            flash("Cannot delete this self-assessment because it has been finalized with manager.", "error")
+        elif workflow_status == STATUS_SUBMITTED:
+            flash("Cannot delete this self-assessment because it has been submitted to the program manager.", "error")
+        elif workflow_status == STATUS_APPROVED:
+            flash("Cannot delete this self-assessment because it has been approved by the program manager.", "error")
+        else:
+            flash("Cannot delete this self-assessment at this stage.", "error")
+        return redirect(url_for("index"))
+
     database.session.delete(entry)
     database.session.commit()
     flash("Entry deleted", "success")
@@ -600,79 +846,44 @@ def delete_entry(entry_id: int) -> Response:
 @app.route("/entries/<int:entry_id>/finalize", methods=["POST"])
 @login_required
 def finalize_entry(entry_id: int) -> Response:
-    """Create a manager-owned final assessment from an employee self assessment."""
+    """Finalize an employee self assessment (manager creates final version)."""
 
     entry = Entry.query.get_or_404(entry_id)
     session_user = session.get("user", {})
     if not _can_manage_entry(entry, session_user):
-        flash("Only the manager can create a final assessment for this entry.", "error")
+        flash("Only the manager can finalize this entry.", "error")
         return redirect(url_for("index"))
 
-    existing_final = FinalEntry.query.filter_by(source_entry_id=entry.id).first()
-    if existing_final:
-        flash("A final assessment already exists for this entry.", "info")
-        return redirect(url_for("edit_final_entry", final_id=existing_final.id))
+    # Check if already finalized
+    if entry.workflow_status and entry.workflow_status != STATUS_CREATED:
+        flash("This entry has already been finalized.", "info")
+        return redirect(url_for("edit_manager_entry", entry_id=entry.id))
 
-    final_entry = FinalEntry(  # type: ignore[call-arg]
-        source_entry_id=entry.id,
-        name=entry.name,
-        email=entry.email,
-        manager_name=session_user.get("name") or entry.manager_name,
-        objective_rating=entry.objective_rating,
-        objective_comment=entry.objective_comment,
-        technical_rating=entry.technical_rating,
-        project_rating=entry.project_rating,
-        methodology_rating=entry.methodology_rating,
-        abilities_comment=entry.abilities_comment,
-        efficiency_collaboration=entry.efficiency_collaboration,
-        efficiency_ownership=entry.efficiency_ownership,
-        efficiency_resourcefulness=entry.efficiency_resourcefulness,
-        efficiency_comment=entry.efficiency_comment,
-        conduct_mutual_trust=entry.conduct_mutual_trust,
-        conduct_proactivity=entry.conduct_proactivity,
-        conduct_leadership=entry.conduct_leadership,
-        conduct_comment=entry.conduct_comment,
-        general_comments=entry.general_comments,
-        feedback_received=entry.feedback_received,
-    )
-
-    database.session.add(final_entry)
+    # Update workflow status and program manager
+    entry.workflow_status = STATUS_FINALIZED
+    entry.program_manager_name = session_user.get("program_manager_name") or ""
     database.session.commit()
-    flash("Final assessment created from managed self assessment.", "success")
-    return redirect(url_for("edit_final_entry", final_id=final_entry.id))
+    flash("Entry finalized. You can now edit manager comments.", "success")
+    return redirect(url_for("edit_manager_entry", entry_id=entry.id))
 
 
-@app.route("/final_entries/<int:final_id>/edit", methods=["GET", "POST"])
+@app.route("/entries/<int:entry_id>/edit_manager", methods=["GET", "POST"])
 @login_required
-def edit_final_entry(final_id: int) -> Union[str, Response]:
-    """Edit a final assessment (manager only)."""
+def edit_manager_entry(entry_id: int) -> Union[str, Response]:
+    """Edit manager comments for an entry (manager only)."""
 
-    final_entry = FinalEntry.query.get_or_404(final_id)
+    entry = Entry.query.get_or_404(entry_id)
     session_user = session.get("user", {})
 
-    if not _can_manage_final(final_entry, session_user):
-        flash("You are not allowed to access this final assessment.", "error")
+    if not _can_manage_entry(entry, session_user):
+        flash("You are not allowed to access this entry.", "error")
+        return redirect(url_for("index"))
+
+    if entry.workflow_status in (STATUS_SUBMITTED, STATUS_APPROVED):
+        flash("This entry cannot be edited after submission to the program manager.", "error")
         return redirect(url_for("index"))
 
     if request.method == "POST":
-        # Readonly/disabled fields from self-assessment (use existing values)
-        objective_rating = final_entry.objective_rating
-        objective_comment = final_entry.objective_comment
-        technical_rating = final_entry.technical_rating
-        project_rating = final_entry.project_rating
-        methodology_rating = final_entry.methodology_rating
-        abilities_comment = final_entry.abilities_comment
-        efficiency_collaboration = final_entry.efficiency_collaboration
-        efficiency_ownership = final_entry.efficiency_ownership
-        efficiency_resourcefulness = final_entry.efficiency_resourcefulness
-        efficiency_comment = final_entry.efficiency_comment
-        conduct_mutual_trust = final_entry.conduct_mutual_trust
-        conduct_proactivity = final_entry.conduct_proactivity
-        conduct_leadership = final_entry.conduct_leadership
-        conduct_comment = final_entry.conduct_comment
-        general_comments = final_entry.general_comments
-        feedback_received = final_entry.feedback_received
-        
         # Editable manager fields
         manager_objective_comment = request.form.get("manager_objective_comment", "").strip()
         manager_abilities_comment = request.form.get("manager_abilities_comment", "").strip()
@@ -691,60 +902,76 @@ def edit_final_entry(final_id: int) -> Union[str, Response]:
 
         if manager_fields_missing:
             flash("All manager fields must be completed", "error")
-            return redirect(url_for("edit_final_entry", final_id=final_id))
+            return redirect(url_for("edit_manager_entry", entry_id=entry_id))
 
-        final_entry.manager_name = session_user.get("name") or final_entry.manager_name
-        final_entry.objective_rating = objective_rating
-        final_entry.objective_comment = objective_comment
-        final_entry.manager_objective_comment = manager_objective_comment
-        final_entry.technical_rating = technical_rating
-        final_entry.project_rating = project_rating
-        final_entry.methodology_rating = methodology_rating
-        final_entry.abilities_comment = abilities_comment
-        final_entry.manager_abilities_comment = manager_abilities_comment
-        final_entry.efficiency_collaboration = efficiency_collaboration
-        final_entry.efficiency_ownership = efficiency_ownership
-        final_entry.efficiency_resourcefulness = efficiency_resourcefulness
-        final_entry.efficiency_comment = efficiency_comment
-        final_entry.manager_efficiency_comment = manager_efficiency_comment
-        final_entry.conduct_mutual_trust = conduct_mutual_trust
-        final_entry.conduct_proactivity = conduct_proactivity
-        final_entry.conduct_leadership = conduct_leadership
-        final_entry.conduct_comment = conduct_comment
-        final_entry.general_comments = general_comments
-        final_entry.feedback_received = feedback_received
-        final_entry.goals_2026 = goals_2026
-        final_entry.manager_general_comments = manager_general_comments
+        entry.manager_objective_comment = manager_objective_comment
+        entry.manager_abilities_comment = manager_abilities_comment
+        entry.manager_efficiency_comment = manager_efficiency_comment
+        entry.goals_2026 = goals_2026
+        entry.manager_general_comments = manager_general_comments
         database.session.commit()
-        flash("Final assessment updated", "success")
+        flash("Manager assessment updated", "success")
         return redirect(url_for("index"))
 
     return render_template(
         "final_edit.html",
-        entry=final_entry,
+        entry=entry,
         objective_choices=OBJECTIVE_CHOICES,
         ability_choices=ABILITY_CHOICES,
     )
 
 
-@app.route("/final_entries/<int:final_id>/delete", methods=["POST"])
+@app.route("/entries/<int:entry_id>/submit", methods=["POST"])
 @login_required
-def delete_final_entry(final_id: int) -> Response:
-    """Delete a final assessment."""
-    final_entry = FinalEntry.query.get_or_404(final_id)
+def submit_entry(entry_id: int) -> Response:
+    """Submit a finalized entry to the program manager."""
+
+    entry = Entry.query.get_or_404(entry_id)
     session_user = session.get("user", {})
-    if not _can_manage_final(final_entry, session_user):
-        flash("You are not allowed to delete this final assessment", "error")
+
+    if not _can_manage_entry(entry, session_user):
+        flash("You are not allowed to submit this entry.", "error")
         return redirect(url_for("index"))
-    database.session.delete(final_entry)
+
+    if entry.workflow_status != STATUS_FINALIZED:
+        flash("Only finalized entries can be submitted to the program manager.", "error")
+        return redirect(url_for("index"))
+
+    entry.workflow_status = STATUS_SUBMITTED
     database.session.commit()
-    flash("Final assessment deleted", "success")
+    flash("Entry submitted to program manager.", "success")
+    return redirect(url_for("index"))
+
+
+@app.route("/entries/<int:entry_id>/approve", methods=["POST"])
+@login_required
+def approve_entry(entry_id: int) -> Response:
+    """Approve a submitted entry as program manager."""
+
+    entry = Entry.query.get_or_404(entry_id)
+    session_user = session.get("user", {})
+
+    if not _can_approve_entry(entry, session_user):
+        flash("You are not allowed to approve this entry.", "error")
+        return redirect(url_for("index"))
+
+    if entry.workflow_status != STATUS_SUBMITTED:
+        flash("Only submitted entries can be approved.", "error")
+        return redirect(url_for("index"))
+
+    entry.workflow_status = STATUS_APPROVED
+    database.session.commit()
+    flash("Entry approved by program manager.", "success")
     return redirect(url_for("index"))
 
 
 @app.route("/login")
 def login() -> Response:
     """Start Microsoft sign-in by redirecting to Azure AD."""
+
+    next_path = request.args.get("next", "").strip()
+    if next_path.startswith("/"):
+        session["post_login_redirect"] = next_path
 
     if not CLIENT_SECRET:
         flash("AZURE_AD_CLIENT_SECRET not set; login will fail.", "error")
@@ -783,9 +1010,18 @@ def authorized() -> Response:
 
     claims = result.get("id_token_claims", {})
     access_token = result.get("access_token", "")
-    manager_name = _fetch_manager_name(access_token or "")
+    manager_name, program_manager_name = _fetch_manager_hierarchy(access_token or "")
+    direct_reports = _fetch_direct_reports(access_token or "")
     user_name = claims.get("name")
     user_email = claims.get("preferred_username")
+
+    app.logger.info(
+        "[AUTH_AUDIT] Resolved manager hierarchy for login user oid=%s email=%s manager=%s program_manager=%s",
+        claims.get("oid") or "",
+        user_email or "",
+        manager_name or "",
+        program_manager_name or "",
+    )
 
     if not user_name or not manager_name:
         flash(
@@ -799,8 +1035,14 @@ def authorized() -> Response:
         "email": user_email,
         "oid": claims.get("oid"),
         "manager_name": manager_name,
+        "program_manager_name": program_manager_name,
+        "direct_reports": direct_reports,
+        "direct_reports_refreshed_at": _utc_now().isoformat(),
     }
     flash("Signed in with Microsoft 365", "success")
+    post_login_redirect = session.pop("post_login_redirect", "")
+    if isinstance(post_login_redirect, str) and post_login_redirect.startswith("/"):
+        return redirect(post_login_redirect)
     return redirect(url_for("index"))
 
 

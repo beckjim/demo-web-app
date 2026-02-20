@@ -1,15 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="tabs" data-tab-root>
+  {% if managed_rows %}
   <div class="tab-list" role="tablist" aria-label="Self assessment tabs">
     <button class="tab-button active" aria-controls="tab-self" data-tab-target="tab-self">Your Self Assessment</button>
     <button class="tab-button" aria-controls="tab-managed" data-tab-target="tab-managed">Managed Self
       Assessments</button>
-    <button class="tab-button" aria-controls="tab-final" data-tab-target="tab-final">Final Assessments</button>
   </div>
+  {% endif %}
   <div class="tab-panels">
     <section id="tab-self" class="card tab-panel">
       <h2>Your Self Assessment</h2>
+      {% if has_own_entry %}
+      <div style="margin-bottom: 10px; padding: 8px; background: #f9fafb; border: 1px solid var(--border); border-radius: 8px;">
+        <strong>Status:</strong> <span class="status-badge {{ own_status_class }}" title="{{ own_status_tooltip }}">{{ own_status_label }}</span> &nbsp;|&nbsp; 
+        <strong>Last updated:</strong> {{ own_timestamp_label }}
+      </div>
+      {% endif %}
       {% if not has_own_entry %}
       <div class="actions" style="margin-bottom: 10px;">
         <a class="button-link" href="{{ url_for('new_entry') }}">Create Self Assessment</a>
@@ -19,7 +26,7 @@
       {% for entry in own_entries %}
       <div class="entry">
         <h3>{{ entry.name }}</h3>
-        <small>{{ entry.email }} — {{ entry.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        <small>{{ entry.email }} — {{ entry.updated_at|german_time }}</small>
         {% if entry.manager_name %}
         <div class="summary"><strong>Manager:</strong> {{ entry.manager_name }}</div>
         {% endif %}
@@ -54,14 +61,12 @@
           <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
         </div>
         <div class="actions">
-          {% if entry.id not in final_lookup %}
+          {% if own_status_code == status_created %}
           <a class="button-link" href="{{ url_for('edit_entry', entry_id=entry.id) }}">Edit</a>
           <form method="post" action="{{ url_for('delete_entry', entry_id=entry.id) }}"
             onsubmit="return confirm('Delete this entry?');">
             <button class="secondary" type="submit">Delete</button>
           </form>
-          {% else %}
-          <span style="color: #666; font-style: italic;">Final assessment created - editing locked</span>
           {% endif %}
         </div>
       </div>
@@ -71,121 +76,123 @@
       {% endif %}
     </section>
 
+    {% if managed_rows %}
     <section id="tab-managed" class="card tab-panel">
       <h2>Managed Self Assessments</h2>
-      {% if managed_entries %}
-      {% for entry in managed_entries %}
-      <div class="entry">
-        <h3>{{ entry.name }}</h3>
-        <small>{{ entry.email }} — {{ entry.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
-        {% if entry.manager_name %}
-        <div class="summary"><strong>Manager:</strong> {{ entry.manager_name }}</div>
-        {% endif %}
-        <div class="summary">
-          <div><strong>Objective rating:</strong> {{ entry.objective_rating }}</div>
-          <div><strong>Objective comments:</strong> {{ entry.objective_comment }}</div>
-          <div><strong>Abilities:</strong>
-            <ul>
-              <li>Technical/functional skills: {{ entry.technical_rating }}</li>
-              <li>Project management: {{ entry.project_rating }}</li>
-              <li>Methodology/processes competencies: {{ entry.methodology_rating }}</li>
-            </ul>
-            <div><strong>Abilities comments:</strong> {{ entry.abilities_comment }}</div>
-          </div>
-          <div><strong>Efficiency:</strong>
-            <ul>
-              <li>Collaboration: {{ entry.efficiency_collaboration }}</li>
-              <li>Ownership: {{ entry.efficiency_ownership }}</li>
-              <li>Resourcefulness: {{ entry.efficiency_resourcefulness }}</li>
-            </ul>
-            <div><strong>Efficiency comments:</strong> {{ entry.efficiency_comment }}</div>
-          </div>
-          <div><strong>Conduct in the service:</strong>
-            <ul>
-              <li>Mutual trust and respect: {{ entry.conduct_mutual_trust }}</li>
-              <li>Proactivity: {{ entry.conduct_proactivity }}</li>
-              <li>Leadership: {{ entry.conduct_leadership }}</li>
-            </ul>
-            <div><strong>Conduct comments:</strong> {{ entry.conduct_comment }}</div>
-          </div>
-          <div><strong>Feedback received:</strong> {{ entry.feedback_received or 'N/A' }}</div>
-          <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
-        </div>
-        <div class="actions">
-          {% if final_lookup.get(entry.id) %}
-          <a class="button-link" href="{{ url_for('edit_final_entry', final_id=final_lookup[entry.id].id) }}">Edit
-            Final Assessment</a>
-          {% else %}
-          <form method="post" action="{{ url_for('finalize_entry', entry_id=entry.id) }}">
-            <button type="submit">Create Final Assessment</button>
-          </form>
+      <div class="actions" style="margin-bottom: 10px;">
+        <form method="post" action="{{ url_for('refresh_team_members') }}">
+          <button type="submit">Refresh Team Members</button>
+        </form>
+        <span style="color: #666;">Last refreshed: {{ team_refreshed_at }}</span>
+      </div>
+      {% if managed_rows %}
+      <table class="managed-table">
+        <thead>
+          <tr>
+            <th>Team member</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Timestamp</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in managed_rows %}
+          <tr>
+            <td>
+              {% if row.entry %}
+              <button type="button" class="text managed-name-button" data-toggle-detail="managed-detail-{{ loop.index }}"
+                aria-expanded="false">{{ row.member_name }}</button>
+              {% else %}
+              {{ row.member_name }}
+              {% endif %}
+            </td>
+            <td>{{ row.member_email or 'N/A' }}</td>
+            <td><span class="status-badge {{ row.status_class }}" title="{{ row.status_tooltip }}">{{ row.status_label }}</span></td>
+            <td>{{ row.timestamp_label }}</td>
+            <td>
+              <div class="actions">
+                {% if row.status_code == status_created and row.entry %}
+                <form method="post" action="{{ url_for('finalize_entry', entry_id=row.entry.id) }}">
+                  <button type="submit">Finalize Assessment</button>
+                </form>
+                {% elif row.status_code == status_finalized and row.entry %}
+                <a class="button-link" href="{{ url_for('edit_manager_entry', entry_id=row.entry.id) }}">Edit Manager Assessment</a>
+                <form method="post" action="{{ url_for('submit_entry', entry_id=row.entry.id) }}">
+                  <button type="submit">Submit to Program Manager</button>
+                </form>
+                {% elif row.status_code == status_submitted and row.entry and session.get('user', {}).get('name') == row.entry.program_manager_name %}
+                <form method="post" action="{{ url_for('approve_entry', entry_id=row.entry.id) }}">
+                  <button type="submit">Approve</button>
+                </form>
+                {% else %}
+                <span style="color: #666; font-style: italic;">-</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% if row.entry %}
+          <tr id="managed-detail-{{ loop.index }}" class="managed-detail-row" style="display: none;">
+            <td colspan="5">
+              <div class="entry">
+                <small>{{ row.entry.updated_at|german_time }}</small>
+                <div class="summary">
+                  <div><strong>Objective rating:</strong> {{ row.entry.objective_rating }}</div>
+                  <div><strong>Objective comments:</strong> {{ row.entry.objective_comment }}</div>
+                  <div><strong>Abilities:</strong>
+                    <ul>
+                      <li>Technical/functional skills: {{ row.entry.technical_rating }}</li>
+                      <li>Project management: {{ row.entry.project_rating }}</li>
+                      <li>Methodology/processes competencies: {{ row.entry.methodology_rating }}</li>
+                    </ul>
+                    <div><strong>Abilities comments:</strong> {{ row.entry.abilities_comment }}</div>
+                  </div>
+                  <div><strong>Efficiency:</strong>
+                    <ul>
+                      <li>Collaboration: {{ row.entry.efficiency_collaboration }}</li>
+                      <li>Ownership: {{ row.entry.efficiency_ownership }}</li>
+                      <li>Resourcefulness: {{ row.entry.efficiency_resourcefulness }}</li>
+                    </ul>
+                    <div><strong>Efficiency comments:</strong> {{ row.entry.efficiency_comment }}</div>
+                  </div>
+                  <div><strong>Conduct in the service:</strong>
+                    <ul>
+                      <li>Mutual trust and respect: {{ row.entry.conduct_mutual_trust }}</li>
+                      <li>Proactivity: {{ row.entry.conduct_proactivity }}</li>
+                      <li>Leadership: {{ row.entry.conduct_leadership }}</li>
+                    </ul>
+                    <div><strong>Conduct comments:</strong> {{ row.entry.conduct_comment }}</div>
+                  </div>
+                  <div><strong>Feedback received:</strong> {{ row.entry.feedback_received or 'N/A' }}</div>
+                  <div><strong>General comments:</strong> {{ row.entry.general_comments }}</div>
+                </div>
+              </div>
+            </td>
+          </tr>
           {% endif %}
-        </div>
-      </div>
-      {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
       {% else %}
-      <p>No managed self assessments.</p>
+      <p>No managed team members found.</p>
       {% endif %}
     </section>
+    {% endif %}
 
-    <section id="tab-final" class="card tab-panel">
-      <h2>Final Assessments</h2>
-      {% if final_entries %}
-      {% for entry in final_entries %}
-      <div class="entry">
-        <h3>{{ entry.name }}</h3>
-        <small>{{ entry.email }} — Finalized {{ entry.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
-        {% if entry.manager_name %}
-        <div class="summary"><strong>Manager:</strong> {{ entry.manager_name }}</div>
-        {% endif %}
-        <div class="summary">
-          <div><strong>Objective rating:</strong> {{ entry.objective_rating }}</div>
-          <div><strong>Objective comments:</strong> {{ entry.objective_comment }}</div>
-          <div><strong>Manager's objective comments:</strong> {{ entry.manager_objective_comment or 'N/A' }}</div>
-          <div><strong>Abilities:</strong>
-            <ul>
-              <li>Technical/functional skills: {{ entry.technical_rating }}</li>
-              <li>Project management: {{ entry.project_rating }}</li>
-              <li>Methodology/processes competencies: {{ entry.methodology_rating }}</li>
-            </ul>
-            <div><strong>Abilities comments:</strong> {{ entry.abilities_comment }}</div>
-            <div><strong>Manager's abilities comments:</strong> {{ entry.manager_abilities_comment or 'N/A' }}</div>
-          </div>
-          <div><strong>Efficiency:</strong>
-            <ul>
-              <li>Collaboration: {{ entry.efficiency_collaboration }}</li>
-              <li>Ownership: {{ entry.efficiency_ownership }}</li>
-              <li>Resourcefulness: {{ entry.efficiency_resourcefulness }}</li>
-            </ul>
-            <div><strong>Efficiency comments:</strong> {{ entry.efficiency_comment }}</div>
-            <div><strong>Manager's efficiency comments:</strong> {{ entry.manager_efficiency_comment or 'N/A' }}</div>
-          </div>
-          <div><strong>Conduct in the service:</strong>
-            <ul>
-              <li>Mutual trust and respect: {{ entry.conduct_mutual_trust }}</li>
-              <li>Proactivity: {{ entry.conduct_proactivity }}</li>
-              <li>Leadership: {{ entry.conduct_leadership }}</li>
-            </ul>
-            <div><strong>Conduct comments:</strong> {{ entry.conduct_comment }}</div>
-          </div>
-          <div><strong>Feedback received:</strong> {{ entry.feedback_received or 'N/A' }}</div>
-          <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
-          <div><strong>Goals/objectives for 2026:</strong> {{ entry.goals_2026 or 'N/A' }}</div>
-          <div><strong>Manager's general comments:</strong> {{ entry.manager_general_comments or 'N/A' }}</div>
-        </div>
-        <div class="actions">
-          <a class="button-link" href="{{ url_for('edit_final_entry', final_id=entry.id) }}">Edit Final Assessment</a>
-          <form method="post" action="{{ url_for('delete_final_entry', final_id=entry.id) }}"
-            onsubmit="return confirm('Delete this final assessment?');">
-            <button class="secondary" type="submit">Delete</button>
-          </form>
-        </div>
-      </div>
-      {% endfor %}
-      {% else %}
-      <p>No final assessments yet.</p>
-      {% endif %}
-    </section>
   </div>
 </div>
+<script>
+  document.querySelectorAll('[data-toggle-detail]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var targetId = button.getAttribute('data-toggle-detail');
+      var detailRow = targetId ? document.getElementById(targetId) : null;
+      if (!detailRow) {
+        return;
+      }
+      var isOpen = detailRow.style.display !== 'none';
+      detailRow.style.display = isOpen ? 'none' : 'table-row';
+      button.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    });
+  });
+</script>
 {% endblock %}

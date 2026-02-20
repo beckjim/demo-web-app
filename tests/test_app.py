@@ -4,9 +4,11 @@ import pytest
 
 from employee_dialogue import ABILITY_CHOICES
 from employee_dialogue import OBJECTIVE_CHOICES
+from employee_dialogue import STATUS_CREATED
+from employee_dialogue import STATUS_FINALIZED
 from employee_dialogue import Entry
-from employee_dialogue import FinalEntry
 from employee_dialogue import _can_access_entry
+from employee_dialogue import _can_approve_entry
 from employee_dialogue import _can_manage_entry
 from employee_dialogue import _validate_choice
 from employee_dialogue import app
@@ -75,35 +77,44 @@ class TestModels:
             assert entry.created_at is not None
             assert entry.updated_at is not None
 
-    def test_final_entry_creation(self, client):
-        """Test creating a FinalEntry."""
+    def test_entry_with_workflow_status(self, client):
+        """Test Entry with workflow status and manager fields."""
         with app.app_context():
-            final = FinalEntry(
-                source_entry_id=1,
+            entry = Entry(
                 name="Test User",
                 email="test@example.com",
                 manager_name="Test Manager",
                 objective_rating="Achieved objective",
                 objective_comment="Test comment",
+                manager_objective_comment="Manager comment",
                 technical_rating="Meets expectations",
                 project_rating="Meets expectations",
                 methodology_rating="Meets expectations",
                 abilities_comment="Test abilities",
+                manager_abilities_comment="Manager abilities comment",
                 efficiency_collaboration="Meets expectations",
                 efficiency_ownership="Meets expectations",
                 efficiency_resourcefulness="Meets expectations",
                 efficiency_comment="Test efficiency",
+                manager_efficiency_comment="Manager efficiency comment",
                 conduct_mutual_trust="Meets expectations",
                 conduct_proactivity="Meets expectations",
                 conduct_leadership="N/A",
                 conduct_comment="Test conduct",
                 general_comments="Test general",
+                goals_2026="Test goals",
+                manager_general_comments="Manager general comments",
+                feedback_received="Yes",
+                program_manager_name="Program Manager",
+                workflow_status=STATUS_FINALIZED,
             )
-            database.session.add(final)
+            database.session.add(entry)
             database.session.commit()
 
-            assert final.id is not None
-            assert final.source_entry_id == 1
+            assert entry.id is not None
+            assert entry.workflow_status == STATUS_FINALIZED
+            assert entry.manager_objective_comment == "Manager comment"
+            assert entry.program_manager_name == "Program Manager"
 
 
 class TestValidation:
@@ -239,6 +250,7 @@ class TestRoutes:
                     "conduct_leadership": "N/A",
                     "conduct_comment": "Test conduct comment",
                     "general_comments": "Test general comments",
+                    "feedback_received": "Yes",
                 },
             )
             assert response.status_code == 302

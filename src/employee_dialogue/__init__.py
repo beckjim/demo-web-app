@@ -1,10 +1,12 @@
 """Employee Dialogue - Flask app to collect, edit, and delete performance review entries."""
 
 import os
+import smtplib
 import uuid
 
 from datetime import datetime
 from datetime import timezone
+from email.message import EmailMessage
 from functools import wraps
 from typing import Any
 from typing import Callable
@@ -40,6 +42,15 @@ CLIENT_SECRET = os.environ.get("AZURE_AD_CLIENT_SECRET", "")
 AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
 REDIRECT_PATH = "/auth/redirect"
 SCOPES = ["User.Read", "Directory.Read.All"]
+
+SMTP_HOST = os.environ.get("SMTP_HOST", "localhost")
+try:
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "1587"))
+except ValueError:
+    app.logger.warning("Invalid SMTP_PORT value; defaulting to 1587")
+    SMTP_PORT = 1587
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
 database = SQLAlchemy(app)
 
@@ -636,6 +647,79 @@ def _can_approve_entry(entry: Entry, session_user: dict[str, Any]) -> bool:
     return bool(session_name and program_manager_name and session_name == program_manager_name)
 
 
+def _assessment_email_subject(entry: Entry) -> str:
+    """Return summary email subject for an entry."""
+
+    return f"Assessment summary submitted: {entry.name}"
+
+
+def _assessment_email_body(entry: Entry) -> str:
+    """Return plain-text assessment summary for email delivery."""
+
+    lines = [
+        "Your finalized assessment has been submitted.",
+        "",
+        "Employee",
+        f"- Name: {entry.name}",
+        f"- Email: {entry.email}",
+        f"- Manager: {entry.manager_name or 'N/A'}",
+        f"- Program Manager: {entry.program_manager_name or 'N/A'}",
+        f"- Status: {STATUS_LABELS.get(entry.workflow_status or STATUS_CREATED, STATUS_LABELS[STATUS_CREATED])}",
+        "",
+        "Objective",
+        f"- Rating: {entry.objective_rating}",
+        f"- Employee Comment: {entry.objective_comment}",
+        f"- Manager Comment: {entry.manager_objective_comment or 'N/A'}",
+        "",
+        "Abilities",
+        f"- Technical: {entry.technical_rating}",
+        f"- Project: {entry.project_rating}",
+        f"- Methodology: {entry.methodology_rating}",
+        f"- Employee Comment: {entry.abilities_comment}",
+        f"- Manager Comment: {entry.manager_abilities_comment or 'N/A'}",
+        "",
+        "Efficiency",
+        f"- Collaboration: {entry.efficiency_collaboration}",
+        f"- Ownership: {entry.efficiency_ownership}",
+        f"- Resourcefulness: {entry.efficiency_resourcefulness}",
+        f"- Employee Comment: {entry.efficiency_comment}",
+        f"- Manager Comment: {entry.manager_efficiency_comment or 'N/A'}",
+        "",
+        "Conduct",
+        f"- Mutual trust: {entry.conduct_mutual_trust}",
+        f"- Proactivity: {entry.conduct_proactivity}",
+        f"- Leadership: {entry.conduct_leadership}",
+        f"- Comment: {entry.conduct_comment}",
+        "",
+        "General",
+        f"- Employee General Comments: {entry.general_comments}",
+        f"- Manager General Comments: {entry.manager_general_comments or 'N/A'}",
+        f"- Goals 2026: {entry.goals_2026 or 'N/A'}",
+        f"- Feedback Received: {entry.feedback_received or 'N/A'}",
+    ]
+    return "\n".join(lines)
+
+
+def _send_assessment_summary_email(entry: Entry) -> None:
+    """Send assessment summary email to the entry owner using SMTP auth."""
+
+    recipient = (entry.email or "").strip()
+    if not recipient:
+        raise ValueError("Entry email is empty")
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        raise ValueError("SMTP credentials are not configured")
+
+    message = EmailMessage()
+    message["From"] = SMTP_USERNAME
+    message["To"] = recipient
+    message["Subject"] = _assessment_email_subject(entry)
+    message.set_content(_assessment_email_body(entry))
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
+        smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+        smtp.send_message(message)
+
+
 @app.route("/entries", methods=["POST"])
 @login_required
 def create_entry() -> Response:
@@ -980,6 +1064,18 @@ def submit_entry(entry_id: int) -> Response:
 
     entry.workflow_status = STATUS_SUBMITTED
     database.session.commit()
+
+    try:
+        _send_assessment_summary_email(entry)
+    except Exception as exc:  # pylint: disable=broad-except
+        app.logger.exception(
+            "Failed to send assessment summary email for entry_id=%s: %s",
+            entry.id,
+            exc,
+        )
+        flash("Entry submitted to program manager, but summary email could not be sent.", "warning")
+        return redirect(url_for("index"))
+
     flash("Entry submitted to program manager.", "success")
     return redirect(url_for("index"))
 

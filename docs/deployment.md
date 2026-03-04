@@ -24,6 +24,12 @@ FLASK_ENV=production
 
 # Microsoft Entra
 AZURE_AD_CLIENT_SECRET=<from-azure-portal>
+
+# SMTP for assessment summary email delivery
+SMTP_HOST=localhost
+SMTP_PORT=1587
+SMTP_USERNAME=xxx@euro-fusion.org
+SMTP_PASSWORD=yyy
 ```
 
 ### Optional
@@ -179,6 +185,10 @@ services:
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY}
       - AZURE_AD_CLIENT_SECRET=${AZURE_AD_CLIENT_SECRET}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
     volumes:
       - ./instance:/app/instance  # Database persistence
     restart: unless-stopped
@@ -217,6 +227,7 @@ git push heroku main
 # 3. Set environment variables
 heroku config:set SECRET_KEY=your-secret
 heroku config:set AZURE_AD_CLIENT_SECRET=your-secret
+heroku config:set SMTP_HOST=localhost SMTP_PORT=1587 SMTP_USERNAME=xxx@euro-fusion.org SMTP_PASSWORD=yyy
 ```
 
 #### AWS Elastic Beanstalk
@@ -232,7 +243,7 @@ eb init -p python-3.11 employee-dialogue
 eb create production
 
 # 4. Set environment variables
-eb setenv SECRET_KEY=your-secret AZURE_AD_CLIENT_SECRET=your-secret
+eb setenv SECRET_KEY=your-secret AZURE_AD_CLIENT_SECRET=your-secret SMTP_HOST=localhost SMTP_PORT=1587 SMTP_USERNAME=xxx@euro-fusion.org SMTP_PASSWORD=yyy
 
 # 5. Deploy
 eb deploy
@@ -252,7 +263,7 @@ gcloud run deploy employee-dialogue \
   --image gcr.io/your-project/employee-dialogue \
   --platform managed \
   --region us-central1 \
-  --set-env-vars SECRET_KEY=your-secret
+  --set-env-vars SECRET_KEY=your-secret,AZURE_AD_CLIENT_SECRET=your-secret,SMTP_HOST=localhost,SMTP_PORT=1587,SMTP_USERNAME=xxx@euro-fusion.org,SMTP_PASSWORD=yyy
 ```
 
 ## Database Configuration

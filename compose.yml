@@ -11,6 +11,10 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
       - AZURE_AD_CLIENT_SECRET=${AZURE_AD_CLIENT_SECRET}
+      - SMTP_HOST=${SMTP_HOST:-localhost}
+      - SMTP_PORT=${SMTP_PORT:-1587}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/login"]

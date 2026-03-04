@@ -18,7 +18,13 @@ Create a .env file (or edit the provided one):
 ```
 AZURE_AD_CLIENT_SECRET=your_client_secret_here
 SECRET_KEY=change_me_in_prod
+SMTP_HOST=localhost
+SMTP_PORT=1587
+SMTP_USERNAME=xxx@euro-fusion.org
+SMTP_PASSWORD=yyy
 ```
+
+When a manager submits a finalized assessment, the app sends a plain SMTP summary email to the employee using the configured SMTP server (no SSL/TLS; authenticated with username/password).
 
 ## Run
 ```bash

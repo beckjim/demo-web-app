@@ -2,9 +2,12 @@
 
 import pytest
 
+import employee_dialogue as app_module
+
 from employee_dialogue import ABILITY_CHOICES
 from employee_dialogue import OBJECTIVE_CHOICES
 from employee_dialogue import STATUS_FINALIZED
+from employee_dialogue import STATUS_SUBMITTED
 from employee_dialogue import Entry
 from employee_dialogue import _can_access_entry
 from employee_dialogue import _can_manage_entry
@@ -356,3 +359,140 @@ class TestFormValidation:
             },
         )
         assert response.status_code == 302
+
+
+class TestSubmissionEmail:
+    """Test submission email behavior."""
+
+    def _create_finalized_entry(self) -> int:
+        with app.app_context():
+            entry = Entry(
+                name="Employee User",
+                email="employee@example.com",
+                manager_name="Manager User",
+                objective_rating="Achieved objective",
+                objective_comment="Objective comment",
+                manager_objective_comment="Manager objective",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Abilities comment",
+                manager_abilities_comment="Manager abilities",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Efficiency comment",
+                manager_efficiency_comment="Manager efficiency",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Conduct comment",
+                general_comments="General comments",
+                goals_2026="Goals",
+                manager_general_comments="Manager general",
+                feedback_received="Yes",
+                workflow_status=STATUS_FINALIZED,
+            )
+            database.session.add(entry)
+            database.session.commit()
+            return entry.id
+
+    def test_submit_entry_sends_authenticated_summary_email(self, client, monkeypatch):
+        """Test submit route sends summary email using SMTP authentication."""
+
+        entry_id = self._create_finalized_entry()
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Manager User",
+                "email": "manager@example.com",
+                "oid": "manager-oid",
+                "manager_name": "Program Manager",
+            }
+
+        sent: dict[str, object] = {}
+
+        class DummySMTP:
+            def __init__(self, host, port, timeout):
+                sent["host"] = host
+                sent["port"] = port
+                sent["timeout"] = timeout
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return None
+
+            def login(self, username, password):
+                sent["username"] = username
+                sent["password"] = password
+
+            def send_message(self, message):
+                sent["to"] = message["To"]
+                sent["subject"] = message["Subject"]
+
+        monkeypatch.setattr(app_module.smtplib, "SMTP", DummySMTP)
+        monkeypatch.setattr(app_module, "SMTP_HOST", "localhost")
+        monkeypatch.setattr(app_module, "SMTP_PORT", 1587)
+        monkeypatch.setattr(app_module, "SMTP_USERNAME", "xxx@euro-fusion.org")
+        monkeypatch.setattr(app_module, "SMTP_PASSWORD", "yyy")
+
+        response = client.post(f"/entries/{entry_id}/submit")
+        assert response.status_code == 302
+
+        with app.app_context():
+            submitted_entry = database.session.get(Entry, entry_id)
+            assert submitted_entry is not None
+            assert submitted_entry.workflow_status == STATUS_SUBMITTED
+
+        assert sent["host"] == "localhost"
+        assert sent["port"] == 1587
+        assert sent["username"] == "xxx@euro-fusion.org"
+        assert sent["password"] == "yyy"
+        assert sent["to"] == "employee@example.com"
+        assert "Assessment summary submitted" in str(sent["subject"])
+
+    def test_submit_entry_keeps_submission_when_email_fails(self, client, monkeypatch):
+        """Test submit route still submits entry when SMTP send fails."""
+
+        entry_id = self._create_finalized_entry()
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Manager User",
+                "email": "manager@example.com",
+                "oid": "manager-oid",
+                "manager_name": "Program Manager",
+            }
+
+        class FailingSMTP:
+            def __init__(self, host, port, timeout):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return None
+
+            def login(self, username, password):
+                raise RuntimeError("SMTP unavailable")
+
+            def send_message(self, message):
+                return None
+
+        monkeypatch.setattr(app_module.smtplib, "SMTP", FailingSMTP)
+        monkeypatch.setattr(app_module, "SMTP_HOST", "localhost")
+        monkeypatch.setattr(app_module, "SMTP_PORT", 1587)
+        monkeypatch.setattr(app_module, "SMTP_USERNAME", "xxx@euro-fusion.org")
+        monkeypatch.setattr(app_module, "SMTP_PASSWORD", "yyy")
+
+        response = client.post(f"/entries/{entry_id}/submit", follow_redirects=True)
+        assert response.status_code == 200
+        assert b"summary email could not be sent" in response.data
+
+        with app.app_context():
+            submitted_entry = database.session.get(Entry, entry_id)
+            assert submitted_entry is not None
+            assert submitted_entry.workflow_status == STATUS_SUBMITTED

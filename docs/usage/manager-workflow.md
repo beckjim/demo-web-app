@@ -108,7 +108,7 @@ You have read-only access to the employee's self-assessment and can provide:
 
 Click **Submit Final Assessment** to:
 - Save all feedback
-- Notify employee
+- Send a summary email to the employee
 - Lock both assessments
 - End current review cycle
 

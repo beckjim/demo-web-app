@@ -43,3 +43,4 @@ Thumbs.db
 /config/emailproxy.config
 mail.cmd
 mail.sh
+config/credstore.config

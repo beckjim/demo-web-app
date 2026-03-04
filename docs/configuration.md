@@ -14,6 +14,12 @@ FLASK_ENV=development
 # Microsoft Entra (Azure AD)
 AZURE_AD_CLIENT_SECRET=your_client_secret
 
+# SMTP for assessment summary emails
+SMTP_HOST=localhost
+SMTP_PORT=1587
+SMTP_USERNAME=xxx@euro-fusion.org
+SMTP_PASSWORD=yyy
+
 # Database (optional)
 DATABASE_URL=sqlite:///app.db
 ```
@@ -58,6 +64,16 @@ AZURE_AD_CLIENT_SECRET=your_copied_secret
     Never commit secrets to version control. Use `.env` and add it to `.gitignore`.
 
 ## Optional Configuration
+
+### Assessment Summary Email (SMTP)
+
+When a manager submits a finalized assessment, the application sends a summary email to the employee.
+
+- SMTP host: `SMTP_HOST` (use `localhost`)
+- SMTP port: `SMTP_PORT` (use `1587`)
+- Auth user: `SMTP_USERNAME`
+- Auth password: `SMTP_PASSWORD`
+- Transport: plain SMTP with authentication (no SSL/TLS)
 
 ### Database Configuration
 

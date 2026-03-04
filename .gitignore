@@ -39,3 +39,7 @@ instance/
 Thumbs.db
 .idea/
 .vscode/
+/mail.txt
+/config/emailproxy.config
+mail.cmd
+mail.sh

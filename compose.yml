@@ -18,5 +18,18 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  emailproxy:
+    image: blacktirion/email-oauth2-proxy-docker # ghcr.io optional. this is published on both Docker Hub and Github Container Repository
+    container_name: emailproxy
+    volumes:
+      - ./config:/config
+    ports:
+      - 127.0.0.1:1587:1587
+    environment:
+      LOGFILE: true
+      DEBUG: false
+      CACHE_STORE: /config/credstore.config
+
 # volumes:
 #   app-data:

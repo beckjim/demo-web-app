@@ -1,7 +1,7 @@
 """Employee Dialogue - Flask app to collect, edit, and delete performance review entries."""
 
-import os
 import logging
+import os
 import smtplib
 import uuid
 
@@ -161,6 +161,13 @@ STATUS_CLASSES = {
     STATUS_SUBMITTED: "status-submitted",
     STATUS_APPROVED: "status-approved",
 }
+
+# Temporary testing override: allow owners to delete entries finalized with manager.
+# Set ALLOW_FINALIZED_DELETE_TESTING=0 (or false/off/no) to disable.
+ALLOW_FINALIZED_SELF_ASSESSMENT_DELETE_FOR_TESTING = (
+    os.environ.get("ALLOW_FINALIZED_DELETE_TESTING", "1").strip().lower()
+    in {"1", "true", "yes", "on"}
+)
 
 
 class Entry(database.Model):
@@ -664,6 +671,7 @@ def index() -> str:
         status_submitted=STATUS_SUBMITTED,
         status_approved=STATUS_APPROVED,
         status_classes=STATUS_CLASSES,
+        allow_finalized_delete_testing=ALLOW_FINALIZED_SELF_ASSESSMENT_DELETE_FOR_TESTING,
     )
 
 
@@ -1108,9 +1116,13 @@ def delete_entry(entry_id: int) -> Response:
         flash("You are not allowed to access this entry", "error")
         return redirect(url_for("index"))
 
-    # Check workflow status - only allow deleting if created
+    # Check workflow status - only allow deleting if created.
+    # Temporary test mode can also allow finalized self-assessments.
     workflow_status = entry.workflow_status or STATUS_CREATED
-    if workflow_status != STATUS_CREATED:
+    can_delete_finalized_for_testing = (
+        ALLOW_FINALIZED_SELF_ASSESSMENT_DELETE_FOR_TESTING and workflow_status == STATUS_FINALIZED
+    )
+    if workflow_status != STATUS_CREATED and not can_delete_finalized_for_testing:
         app.logger.info(
             "Delete entry blocked by workflow status entry_id=%s status=%s requester=%s",
             entry.id,
@@ -1126,6 +1138,12 @@ def delete_entry(entry_id: int) -> Response:
         else:
             flash("Cannot delete this self-assessment at this stage.", "error")
         return redirect(url_for("index"))
+
+    if can_delete_finalized_for_testing:
+        flash(
+            "Testing mode: deleting a self-assessment finalized with manager is temporarily enabled.",
+            "info",
+        )
 
     deleted_entry_id = entry.id
     deleted_owner = entry.name

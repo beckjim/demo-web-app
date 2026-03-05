@@ -296,6 +296,78 @@ class TestRoutes:
             deleted_entry = database.session.get(Entry, entry_id)
             assert deleted_entry is None
 
+    def test_delete_finalized_entry_allowed_for_testing(self, authenticated_session):
+        """Test temporary testing override allows deleting finalized entries."""
+        with app.app_context():
+            entry = Entry(
+                name="Test User",
+                email="test@example.com",
+                manager_name="Test Manager",
+                objective_rating="Achieved objective",
+                objective_comment="Test",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Test",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Test",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Test",
+                general_comments="Test",
+                workflow_status=STATUS_FINALIZED,
+            )
+            database.session.add(entry)
+            database.session.commit()
+            entry_id = entry.id
+
+        response = authenticated_session.post(f"/entries/{entry_id}/delete", follow_redirects=True)
+        assert response.status_code == 200
+        assert b"Testing mode: deleting a self-assessment finalized with manager is temporarily enabled." in response.data
+
+        with app.app_context():
+            deleted_entry = database.session.get(Entry, entry_id)
+            assert deleted_entry is None
+
+    def test_delete_submitted_entry_still_blocked(self, authenticated_session):
+        """Test submitted entries remain protected from delete."""
+        with app.app_context():
+            entry = Entry(
+                name="Test User",
+                email="test@example.com",
+                manager_name="Test Manager",
+                objective_rating="Achieved objective",
+                objective_comment="Test",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Test",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Test",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Test",
+                general_comments="Test",
+                workflow_status=STATUS_SUBMITTED,
+            )
+            database.session.add(entry)
+            database.session.commit()
+            entry_id = entry.id
+
+        response = authenticated_session.post(f"/entries/{entry_id}/delete", follow_redirects=True)
+        assert response.status_code == 200
+        assert b"Cannot delete this self-assessment because it has been submitted to the program manager." in response.data
+
+        with app.app_context():
+            persisted_entry = database.session.get(Entry, entry_id)
+            assert persisted_entry is not None
+
     def test_login_route(self, client):
         """Test login route redirects to Microsoft."""
         response = client.get("/login")

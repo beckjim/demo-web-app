@@ -66,12 +66,17 @@
         <div class="actions">
           {% if own_status_code == status_created %}
           <a class="button-link" href="{{ url_for('edit_entry', entry_id=entry.id) }}">Edit</a>
+          {% endif %}
+          {% if own_status_code == status_created or (allow_finalized_delete_testing and own_status_code == status_finalized) %}
           <form method="post" action="{{ url_for('delete_entry', entry_id=entry.id) }}"
             onsubmit="return confirm('Delete this entry?');">
             <button class="secondary" type="submit">Delete</button>
           </form>
           {% endif %}
         </div>
+        {% if allow_finalized_delete_testing and own_status_code == status_finalized %}
+        <p style="margin-top: 8px; color: #92400e;"><strong>Testing note:</strong> Deleting a self-assessment finalized with manager is temporarily enabled for testing.</p>
+        {% endif %}
       </div>
       {% endfor %}
       {% else %}

@@ -762,7 +762,7 @@ def _assessment_email_body(entry: Entry) -> str:
     """Return plain-text assessment summary for email delivery."""
 
     lines = [
-        "Your manager has finalized your assessment.",
+        f"The assessment for {entry.name} has been finalized.",
         "",
         "Employee",
         f"- Name: {entry.name}",
@@ -805,25 +805,32 @@ def _assessment_email_body(entry: Entry) -> str:
     return "\n".join(lines)
 
 
-def _send_assessment_summary_email(entry: Entry) -> None:
-    """Send assessment summary email to the entry owner using SMTP auth."""
+def _send_assessment_summary_email(entry: Entry, manager_email: str = "") -> None:
+    """Send assessment summary email to employee and manager using SMTP auth."""
 
-    recipient = (entry.email or "").strip()
-    if not recipient:
-        raise ValueError("Entry email is empty")
+    recipients: list[str] = []
+    for address in ((entry.email or "").strip(), (manager_email or "").strip()):
+        if not address:
+            continue
+        if address.lower() in {recipient.lower() for recipient in recipients}:
+            continue
+        recipients.append(address)
+
+    if not recipients:
+        raise ValueError("No valid email recipients are available")
     if not SMTP_USERNAME or not SMTP_PASSWORD:
         raise ValueError("SMTP credentials are not configured")
 
     message = EmailMessage()
     message["From"] = SMTP_USERNAME
-    message["To"] = recipient
+    message["To"] = ", ".join(recipients)
     message["Subject"] = _assessment_email_subject(entry)
     message.set_content(_assessment_email_body(entry))
 
     app.logger.info(
         "Sending assessment summary email for entry_id=%s to=%s via %s:%s",
         entry.id,
-        recipient,
+        ", ".join(recipients),
         SMTP_HOST,
         SMTP_PORT,
     )
@@ -835,7 +842,7 @@ def _send_assessment_summary_email(entry: Entry) -> None:
     app.logger.info(
         "Assessment summary email sent successfully for entry_id=%s to=%s status=%s",
         entry.id,
-        recipient,
+        ", ".join(recipients),
         entry.workflow_status or STATUS_CREATED,
     )
 
@@ -1271,7 +1278,7 @@ def edit_manager_entry(entry_id: int) -> Union[str, Response]:
         )
 
         try:
-            _send_assessment_summary_email(entry)
+            _send_assessment_summary_email(entry, manager_email=session_user.get("email") or "")
         except Exception as exc:  # pylint: disable=broad-except
             app.logger.exception(
                 "Failed to send assessment finalized email for entry_id=%s: %s",

@@ -531,7 +531,8 @@ class TestSubmissionEmail:
         assert sent["port"] == 1587
         assert sent["username"] == "xxx@euro-fusion.org"
         assert sent["password"] == "yyy"
-        assert sent["to"] == "employee@example.com"
+        recipients = {part.strip() for part in str(sent["to"]).split(",")}
+        assert recipients == {"employee@example.com", "manager@example.com"}
         assert "Assessment finalized" in str(sent["subject"])
 
     def test_save_final_assessment_keeps_finalize_when_email_fails(self, client, monkeypatch):

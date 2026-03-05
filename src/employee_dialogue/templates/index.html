@@ -117,9 +117,7 @@
             <td>
               <div class="actions">
                 {% if row.status_code == status_created and row.entry %}
-                <form method="post" action="{{ url_for('finalize_entry', entry_id=row.entry.id) }}">
-                  <button type="submit">Finalize Assessment</button>
-                </form>
+                <a class="button-link" href="{{ url_for('edit_manager_entry', entry_id=row.entry.id) }}">Open Final Assessment Form</a>
                 {% elif row.status_code == status_finalized and row.entry %}
                 <a class="button-link" href="{{ url_for('edit_manager_entry', entry_id=row.entry.id) }}">Edit Manager Assessment</a>
                 <form method="post" action="{{ url_for('submit_entry', entry_id=row.entry.id) }}">

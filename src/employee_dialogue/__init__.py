@@ -1,6 +1,7 @@
 """Employee Dialogue - Flask app to collect, edit, and delete performance review entries."""
 
 import os
+import logging
 import smtplib
 import uuid
 
@@ -20,6 +21,8 @@ import requests
 from dotenv import load_dotenv
 from flask import Flask
 from flask import flash
+from flask import g
+from flask import has_request_context
 from flask import redirect
 from flask import render_template
 from flask import request
@@ -27,6 +30,7 @@ from flask import session
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
+from sqlalchemy import inspect
 from werkzeug.wrappers.response import Response
 
 load_dotenv()
@@ -35,6 +39,24 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key")
+
+
+class _RequestIdLogFilter(logging.Filter):
+    """Inject request correlation ids into log messages."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        request_id = "n/a"
+        if has_request_context():
+            request_id = getattr(g, "request_id", "n/a")
+
+        record.request_id = request_id
+        if not getattr(record, "_request_id_prefix_applied", False):
+            record.msg = f"[rid={request_id}] {record.msg}"
+            record._request_id_prefix_applied = True
+        return True
+
+
+app.logger.addFilter(_RequestIdLogFilter())
 
 CLIENT_ID = "64326e78-7c64-4dd1-98d4-6bcfd6936c29"
 TENANT_ID = "b3cd43f7-99bd-4233-8384-6f3a21adeced"
@@ -55,6 +77,7 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 database = SQLAlchemy(app)
 
 SKIP_DB_INIT = os.environ.get("SKIP_DB_INIT", "0") == "1"
+_SCHEMA_READY_CHECKED = False
 
 
 def _utc_now() -> datetime:
@@ -256,6 +279,58 @@ def _initialize_database() -> None:
 
 if not SKIP_DB_INIT:
     _initialize_database()
+
+
+def _ensure_schema_ready() -> None:
+    """Guarantee required tables exist before serving requests."""
+
+    global _SCHEMA_READY_CHECKED
+    if _SCHEMA_READY_CHECKED:
+        return
+
+    inspector = inspect(database.engine)
+    if inspector.has_table("entry"):
+        _SCHEMA_READY_CHECKED = True
+        return
+
+    app.logger.warning(
+        "Database table 'entry' missing at runtime; initializing schema now."
+    )
+    _initialize_database()
+    _SCHEMA_READY_CHECKED = True
+
+
+@app.before_request
+def _attach_request_id() -> None:
+    """Attach or generate a correlation id for the current request."""
+
+    incoming_request_id = request.headers.get("X-Request-ID", "").strip()
+    g.request_id = incoming_request_id or str(uuid.uuid4())
+    app.logger.info("Request started method=%s path=%s", request.method, request.path)
+
+
+@app.before_request
+def _prepare_schema_before_request() -> None:
+    """Ensure SQLite schema is initialized for this process."""
+
+    _ensure_schema_ready()
+
+
+@app.after_request
+def _finalize_request_logging(response: Response) -> Response:
+    """Expose correlation id on response and log request completion."""
+
+    request_id = getattr(g, "request_id", "")
+    if request_id:
+        response.headers["X-Request-ID"] = request_id
+
+    app.logger.info(
+        "Request completed method=%s path=%s status=%s",
+        request.method,
+        request.path,
+        response.status_code,
+    )
+    return response
 
 
 def login_required(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -559,6 +634,14 @@ def index() -> str:
 
     managed_rows.sort(key=lambda row: (row.get("member_name") or "").lower())
 
+    app.logger.info(
+        "Loaded index for user=%s own_entries=%s managed_entries=%s program_manager_entries=%s",
+        name or "unknown",
+        len(own_entries),
+        len(managed_entries),
+        len(program_manager_entries),
+    )
+
     return render_template(
         "index.html",
         own_entries=own_entries,
@@ -589,6 +672,13 @@ def index() -> str:
 def refresh_team_members() -> Response:
     """Refresh managed team members by re-running sign-in flow."""
 
+    session_user = session.get("user", {})
+    app.logger.info(
+        "Team refresh requested by user=%s oid=%s",
+        session_user.get("name") or "unknown",
+        session_user.get("oid") or "",
+    )
+
     session["post_login_redirect"] = url_for("index")
     flash("Refreshing team members from Microsoft Entra...", "info")
     return redirect(url_for("login", next=url_for("index")))
@@ -606,8 +696,15 @@ def new_entry() -> Union[str, Response]:
         Entry.query.filter(func.lower(Entry.name) == name.lower()).first() if name else None
     )
     if existing_entry:
+        app.logger.info(
+            "User=%s requested new entry but existing entry_id=%s found; redirecting to edit",
+            name or "unknown",
+            existing_entry.id,
+        )
         flash("You already have an entry. Redirected to edit.", "info")
         return redirect(url_for("edit_entry", entry_id=existing_entry.id))
+
+    app.logger.info("Rendering new entry form for user=%s", name or "unknown")
 
     return render_template(
         "create.html",
@@ -650,14 +747,14 @@ def _can_approve_entry(entry: Entry, session_user: dict[str, Any]) -> bool:
 def _assessment_email_subject(entry: Entry) -> str:
     """Return summary email subject for an entry."""
 
-    return f"Assessment summary submitted: {entry.name}"
+    return f"Assessment finalized: {entry.name}"
 
 
 def _assessment_email_body(entry: Entry) -> str:
     """Return plain-text assessment summary for email delivery."""
 
     lines = [
-        "Your finalized assessment has been submitted.",
+        "Your manager has finalized your assessment.",
         "",
         "Employee",
         f"- Name: {entry.name}",
@@ -715,9 +812,24 @@ def _send_assessment_summary_email(entry: Entry) -> None:
     message["Subject"] = _assessment_email_subject(entry)
     message.set_content(_assessment_email_body(entry))
 
+    app.logger.info(
+        "Sending assessment summary email for entry_id=%s to=%s via %s:%s",
+        entry.id,
+        recipient,
+        SMTP_HOST,
+        SMTP_PORT,
+    )
+
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
         smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
         smtp.send_message(message)
+
+    app.logger.info(
+        "Assessment summary email sent successfully for entry_id=%s to=%s status=%s",
+        entry.id,
+        recipient,
+        entry.workflow_status or STATUS_CREATED,
+    )
 
 
 @app.route("/entries", methods=["POST"])
@@ -786,6 +898,11 @@ def create_entry() -> Response:
         or objective_invalid
         or abilities_invalid
     ):
+        app.logger.warning(
+            "Create entry validation failed for user=%s email=%s",
+            name or "unknown",
+            email or "",
+        )
         flash("All fields must be completed with valid options", "error")
         return redirect(url_for("index"))
 
@@ -793,6 +910,11 @@ def create_entry() -> Response:
         Entry.query.filter(func.lower(Entry.name) == name.lower()).first() if name else None
     )
     if existing_entry:
+        app.logger.warning(
+            "Create entry blocked because entry already exists for user=%s existing_entry_id=%s",
+            name or "unknown",
+            existing_entry.id,
+        )
         flash(
             "You already have a self assessment. Please edit your existing one instead.",
             "error",
@@ -822,6 +944,13 @@ def create_entry() -> Response:
     )
     database.session.add(entry)
     database.session.commit()
+    app.logger.info(
+        "Entry created entry_id=%s owner=%s manager=%s status=%s",
+        entry.id,
+        entry.name,
+        entry.manager_name or "",
+        entry.workflow_status or STATUS_CREATED,
+    )
     flash("Entry created", "success")
     return redirect(url_for("index"))
 
@@ -834,12 +963,24 @@ def edit_entry(entry_id: int) -> Union[str, Response]:
 
     session_user = session.get("user", {})
     if not _can_access_entry(entry, session_user):
+        app.logger.warning(
+            "Edit entry denied entry_id=%s requester=%s owner=%s",
+            entry.id,
+            session_user.get("name") or "unknown",
+            entry.name,
+        )
         flash("You are not allowed to access this entry", "error")
         return redirect(url_for("index"))
 
     # Check workflow status - only allow editing if created
     workflow_status = entry.workflow_status or STATUS_CREATED
     if workflow_status != STATUS_CREATED:
+        app.logger.info(
+            "Edit entry blocked by workflow status entry_id=%s status=%s requester=%s",
+            entry.id,
+            workflow_status,
+            session_user.get("name") or "unknown",
+        )
         if workflow_status == STATUS_FINALIZED:
             flash("Cannot edit this self-assessment because it has been finalized with manager.", "error")
         elif workflow_status == STATUS_SUBMITTED:
@@ -905,6 +1046,11 @@ def edit_entry(entry_id: int) -> Union[str, Response]:
         )
 
         if objective_missing or abilities_missing or objective_invalid or abilities_invalid:
+            app.logger.warning(
+                "Edit entry validation failed entry_id=%s requester=%s",
+                entry.id,
+                session_user.get("name") or "unknown",
+            )
             flash("All fields must be completed with valid options", "error")
             return redirect(url_for("edit_entry", entry_id=entry_id))
 
@@ -928,6 +1074,13 @@ def edit_entry(entry_id: int) -> Union[str, Response]:
         entry.general_comments = general_comments
         entry.feedback_received = feedback_received
         database.session.commit()
+        app.logger.info(
+            "Entry updated entry_id=%s owner=%s updated_by=%s status=%s",
+            entry.id,
+            entry.name,
+            session_user.get("name") or "unknown",
+            entry.workflow_status or STATUS_CREATED,
+        )
         flash("Entry updated", "success")
         return redirect(url_for("index"))
 
@@ -946,12 +1099,24 @@ def delete_entry(entry_id: int) -> Response:
     entry = Entry.query.get_or_404(entry_id)
     session_user = session.get("user", {})
     if not _can_access_entry(entry, session_user):
+        app.logger.warning(
+            "Delete entry denied entry_id=%s requester=%s owner=%s",
+            entry.id,
+            session_user.get("name") or "unknown",
+            entry.name,
+        )
         flash("You are not allowed to access this entry", "error")
         return redirect(url_for("index"))
 
     # Check workflow status - only allow deleting if created
     workflow_status = entry.workflow_status or STATUS_CREATED
     if workflow_status != STATUS_CREATED:
+        app.logger.info(
+            "Delete entry blocked by workflow status entry_id=%s status=%s requester=%s",
+            entry.id,
+            workflow_status,
+            session_user.get("name") or "unknown",
+        )
         if workflow_status == STATUS_FINALIZED:
             flash("Cannot delete this self-assessment because it has been finalized with manager.", "error")
         elif workflow_status == STATUS_SUBMITTED:
@@ -962,8 +1127,16 @@ def delete_entry(entry_id: int) -> Response:
             flash("Cannot delete this self-assessment at this stage.", "error")
         return redirect(url_for("index"))
 
+    deleted_entry_id = entry.id
+    deleted_owner = entry.name
     database.session.delete(entry)
     database.session.commit()
+    app.logger.info(
+        "Entry deleted entry_id=%s owner=%s deleted_by=%s",
+        deleted_entry_id,
+        deleted_owner,
+        session_user.get("name") or "unknown",
+    )
     flash("Entry deleted", "success")
     return redirect(url_for("index"))
 
@@ -971,24 +1144,38 @@ def delete_entry(entry_id: int) -> Response:
 @app.route("/entries/<int:entry_id>/finalize", methods=["POST"])
 @login_required
 def finalize_entry(entry_id: int) -> Response:
-    """Finalize an employee self assessment (manager creates final version)."""
+    """Open manager final-assessment form without changing workflow state."""
 
     entry = Entry.query.get_or_404(entry_id)
     session_user = session.get("user", {})
     if not _can_manage_entry(entry, session_user):
+        app.logger.warning(
+            "Finalize form access denied entry_id=%s requester=%s manager=%s",
+            entry.id,
+            session_user.get("name") or "unknown",
+            entry.manager_name or "",
+        )
         flash("Only the manager can finalize this entry.", "error")
         return redirect(url_for("index"))
 
-    # Check if already finalized
-    if entry.workflow_status and entry.workflow_status != STATUS_CREATED:
-        flash("This entry has already been finalized.", "info")
-        return redirect(url_for("edit_manager_entry", entry_id=entry.id))
+    if entry.workflow_status in (STATUS_SUBMITTED, STATUS_APPROVED):
+        app.logger.info(
+            "Finalize form blocked entry_id=%s status=%s requester=%s",
+            entry.id,
+            entry.workflow_status,
+            session_user.get("name") or "unknown",
+        )
+        flash("This entry cannot be edited after submission to the program manager.", "error")
+        return redirect(url_for("index"))
 
-    # Update workflow status and program manager
-    entry.workflow_status = STATUS_FINALIZED
-    entry.program_manager_name = session_user.get("program_manager_name") or ""
-    database.session.commit()
-    flash("Entry finalized. You can now edit manager comments.", "success")
+    app.logger.info(
+        "Finalize form opened entry_id=%s owner=%s manager=%s status=%s",
+        entry.id,
+        entry.name,
+        session_user.get("name") or "unknown",
+        entry.workflow_status or STATUS_CREATED,
+    )
+    flash("Open manager assessment form and press 'Save Final Assessment' to finalize.", "info")
     return redirect(url_for("edit_manager_entry", entry_id=entry.id))
 
 
@@ -1001,10 +1188,22 @@ def edit_manager_entry(entry_id: int) -> Union[str, Response]:
     session_user = session.get("user", {})
 
     if not _can_manage_entry(entry, session_user):
+        app.logger.warning(
+            "Manager edit denied entry_id=%s requester=%s manager=%s",
+            entry.id,
+            session_user.get("name") or "unknown",
+            entry.manager_name or "",
+        )
         flash("You are not allowed to access this entry.", "error")
         return redirect(url_for("index"))
 
     if entry.workflow_status in (STATUS_SUBMITTED, STATUS_APPROVED):
+        app.logger.info(
+            "Manager edit blocked entry_id=%s status=%s requester=%s",
+            entry.id,
+            entry.workflow_status,
+            session_user.get("name") or "unknown",
+        )
         flash("This entry cannot be edited after submission to the program manager.", "error")
         return redirect(url_for("index"))
 
@@ -1026,16 +1225,45 @@ def edit_manager_entry(entry_id: int) -> Union[str, Response]:
         )
 
         if manager_fields_missing:
+            app.logger.warning(
+                "Manager edit validation failed entry_id=%s requester=%s",
+                entry.id,
+                session_user.get("name") or "unknown",
+            )
             flash("All manager fields must be completed", "error")
             return redirect(url_for("edit_manager_entry", entry_id=entry_id))
 
+        previous_status = entry.workflow_status or STATUS_CREATED
         entry.manager_objective_comment = manager_objective_comment
         entry.manager_abilities_comment = manager_abilities_comment
         entry.manager_efficiency_comment = manager_efficiency_comment
         entry.goals_2026 = goals_2026
         entry.manager_general_comments = manager_general_comments
+        entry.workflow_status = STATUS_FINALIZED
+        entry.program_manager_name = session_user.get("program_manager_name") or ""
         database.session.commit()
-        flash("Manager assessment updated", "success")
+        app.logger.info(
+            "Manager assessment saved entry_id=%s owner=%s manager=%s status=%s->%s program_manager=%s",
+            entry.id,
+            entry.name,
+            session_user.get("name") or "unknown",
+            previous_status,
+            entry.workflow_status,
+            entry.program_manager_name or "",
+        )
+
+        try:
+            _send_assessment_summary_email(entry)
+        except Exception as exc:  # pylint: disable=broad-except
+            app.logger.exception(
+                "Failed to send assessment finalized email for entry_id=%s: %s",
+                entry.id,
+                exc,
+            )
+            flash("Final assessment saved, but summary email could not be sent.", "warning")
+            return redirect(url_for("index"))
+
+        flash("Final assessment saved and summary email sent.", "success")
         return redirect(url_for("index"))
 
     return render_template(
@@ -1055,26 +1283,37 @@ def submit_entry(entry_id: int) -> Response:
     session_user = session.get("user", {})
 
     if not _can_manage_entry(entry, session_user):
+        app.logger.warning(
+            "Submit denied entry_id=%s requester=%s manager=%s",
+            entry.id,
+            session_user.get("name") or "unknown",
+            entry.manager_name or "",
+        )
         flash("You are not allowed to submit this entry.", "error")
         return redirect(url_for("index"))
 
     if entry.workflow_status != STATUS_FINALIZED:
+        app.logger.info(
+            "Submit blocked by status entry_id=%s status=%s requester=%s",
+            entry.id,
+            entry.workflow_status or "",
+            session_user.get("name") or "unknown",
+        )
         flash("Only finalized entries can be submitted to the program manager.", "error")
         return redirect(url_for("index"))
 
+    previous_status = entry.workflow_status or STATUS_CREATED
     entry.workflow_status = STATUS_SUBMITTED
     database.session.commit()
-
-    try:
-        _send_assessment_summary_email(entry)
-    except Exception as exc:  # pylint: disable=broad-except
-        app.logger.exception(
-            "Failed to send assessment summary email for entry_id=%s: %s",
-            entry.id,
-            exc,
-        )
-        flash("Entry submitted to program manager, but summary email could not be sent.", "warning")
-        return redirect(url_for("index"))
+    app.logger.info(
+        "Entry submitted to program manager entry_id=%s owner=%s submitted_by=%s status=%s->%s program_manager=%s",
+        entry.id,
+        entry.name,
+        session_user.get("name") or "unknown",
+        previous_status,
+        entry.workflow_status,
+        entry.program_manager_name or "",
+    )
 
     flash("Entry submitted to program manager.", "success")
     return redirect(url_for("index"))
@@ -1089,15 +1328,36 @@ def approve_entry(entry_id: int) -> Response:
     session_user = session.get("user", {})
 
     if not _can_approve_entry(entry, session_user):
+        app.logger.warning(
+            "Approve denied entry_id=%s requester=%s program_manager=%s",
+            entry.id,
+            session_user.get("name") or "unknown",
+            entry.program_manager_name or "",
+        )
         flash("You are not allowed to approve this entry.", "error")
         return redirect(url_for("index"))
 
     if entry.workflow_status != STATUS_SUBMITTED:
+        app.logger.info(
+            "Approve blocked by status entry_id=%s status=%s requester=%s",
+            entry.id,
+            entry.workflow_status or "",
+            session_user.get("name") or "unknown",
+        )
         flash("Only submitted entries can be approved.", "error")
         return redirect(url_for("index"))
 
+    previous_status = entry.workflow_status or STATUS_CREATED
     entry.workflow_status = STATUS_APPROVED
     database.session.commit()
+    app.logger.info(
+        "Entry approved entry_id=%s owner=%s approved_by=%s status=%s->%s",
+        entry.id,
+        entry.name,
+        session_user.get("name") or "unknown",
+        previous_status,
+        entry.workflow_status,
+    )
     flash("Entry approved by program manager.", "success")
     return redirect(url_for("index"))
 
@@ -1107,10 +1367,12 @@ def login() -> Response:
     """Start Microsoft sign-in by redirecting to Azure AD."""
 
     next_path = request.args.get("next", "").strip()
+    app.logger.info("Login initiated next_path=%s", next_path or "")
     if next_path.startswith("/"):
         session["post_login_redirect"] = next_path
 
     if not CLIENT_SECRET:
+        app.logger.warning("Login initiated without AZURE_AD_CLIENT_SECRET configured")
         flash("AZURE_AD_CLIENT_SECRET not set; login will fail.", "error")
     session["state"] = str(uuid.uuid4())
     auth_url = _build_msal_app().get_authorization_request_url(
@@ -1127,10 +1389,19 @@ def authorized() -> Response:
 
     state = request.args.get("state")
     if state != session.get("state"):
+        app.logger.warning(
+            "Authorization state mismatch expected=%s received=%s",
+            session.get("state") or "",
+            state or "",
+        )
         flash("State mismatch. Please try signing in again.", "error")
         return redirect(url_for("index"))
 
     if request.args.get("error"):
+        app.logger.warning(
+            "Authorization error returned by provider: %s",
+            request.args.get("error_description") or request.args.get("error") or "unknown",
+        )
         flash(f"Login failed: {request.args.get('error_description')}", "error")
         return redirect(url_for("index"))
 
@@ -1142,6 +1413,10 @@ def authorized() -> Response:
     )
 
     if "error" in result:
+        app.logger.warning(
+            "Token acquisition failed: %s",
+            result.get("error_description", "Unknown error"),
+        )
         flash(f"Login failed: {result.get('error_description', 'Unknown error')}", "error")
         return redirect(url_for("index"))
 
@@ -1161,6 +1436,13 @@ def authorized() -> Response:
     )
 
     if not user_name or not manager_name:
+        app.logger.warning(
+            "Authorization missing profile requirements oid=%s email=%s name=%s manager=%s",
+            claims.get("oid") or "",
+            user_email or "",
+            user_name or "",
+            manager_name or "",
+        )
         flash(
             "Login failed: missing required profile information (name or manager).",
             "error",
@@ -1176,6 +1458,14 @@ def authorized() -> Response:
         "direct_reports": direct_reports,
         "direct_reports_refreshed_at": _utc_now().isoformat(),
     }
+    app.logger.info(
+        "User signed in oid=%s email=%s manager=%s program_manager=%s direct_reports=%s",
+        claims.get("oid") or "",
+        user_email or "",
+        manager_name or "",
+        program_manager_name or "",
+        len(direct_reports),
+    )
     flash("Signed in with Microsoft 365", "success")
     post_login_redirect = session.pop("post_login_redirect", "")
     if isinstance(post_login_redirect, str) and post_login_redirect.startswith("/"):
@@ -1187,6 +1477,12 @@ def authorized() -> Response:
 def logout() -> Response:
     """Clear local session and sign out of Azure AD."""
 
+    session_user = session.get("user", {})
+    app.logger.info(
+        "Logout initiated by user=%s oid=%s",
+        session_user.get("name") or "unknown",
+        session_user.get("oid") or "",
+    )
     session.clear()
     post_logout = url_for("index", _external=True)
     return redirect(f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri={post_logout}")

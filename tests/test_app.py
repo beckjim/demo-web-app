@@ -364,7 +364,7 @@ class TestFormValidation:
 class TestSubmissionEmail:
     """Test submission email behavior."""
 
-    def _create_finalized_entry(self) -> int:
+    def _create_created_entry(self) -> int:
         with app.app_context():
             entry = Entry(
                 name="Employee User",
@@ -391,16 +391,15 @@ class TestSubmissionEmail:
                 goals_2026="Goals",
                 manager_general_comments="Manager general",
                 feedback_received="Yes",
-                workflow_status=STATUS_FINALIZED,
             )
             database.session.add(entry)
             database.session.commit()
             return entry.id
 
-    def test_submit_entry_sends_authenticated_summary_email(self, client, monkeypatch):
-        """Test submit route sends summary email using SMTP authentication."""
+    def test_save_final_assessment_sends_authenticated_summary_email(self, client, monkeypatch):
+        """Test manager save final assessment sends summary email using SMTP authentication."""
 
-        entry_id = self._create_finalized_entry()
+        entry_id = self._create_created_entry()
 
         with client.session_transaction() as sess:
             sess["user"] = {
@@ -408,6 +407,7 @@ class TestSubmissionEmail:
                 "email": "manager@example.com",
                 "oid": "manager-oid",
                 "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
             }
 
         sent: dict[str, object] = {}
@@ -438,25 +438,34 @@ class TestSubmissionEmail:
         monkeypatch.setattr(app_module, "SMTP_USERNAME", "xxx@euro-fusion.org")
         monkeypatch.setattr(app_module, "SMTP_PASSWORD", "yyy")
 
-        response = client.post(f"/entries/{entry_id}/submit")
+        response = client.post(
+            f"/entries/{entry_id}/edit_manager",
+            data={
+                "manager_objective_comment": "Updated manager objective",
+                "manager_abilities_comment": "Updated manager abilities",
+                "manager_efficiency_comment": "Updated manager efficiency",
+                "goals_2026": "Updated goals",
+                "manager_general_comments": "Updated manager general",
+            },
+        )
         assert response.status_code == 302
 
         with app.app_context():
-            submitted_entry = database.session.get(Entry, entry_id)
-            assert submitted_entry is not None
-            assert submitted_entry.workflow_status == STATUS_SUBMITTED
+            finalized_entry = database.session.get(Entry, entry_id)
+            assert finalized_entry is not None
+            assert finalized_entry.workflow_status == STATUS_FINALIZED
 
         assert sent["host"] == "localhost"
         assert sent["port"] == 1587
         assert sent["username"] == "xxx@euro-fusion.org"
         assert sent["password"] == "yyy"
         assert sent["to"] == "employee@example.com"
-        assert "Assessment summary submitted" in str(sent["subject"])
+        assert "Assessment finalized" in str(sent["subject"])
 
-    def test_submit_entry_keeps_submission_when_email_fails(self, client, monkeypatch):
-        """Test submit route still submits entry when SMTP send fails."""
+    def test_save_final_assessment_keeps_finalize_when_email_fails(self, client, monkeypatch):
+        """Test manager save still finalizes entry when SMTP send fails."""
 
-        entry_id = self._create_finalized_entry()
+        entry_id = self._create_created_entry()
 
         with client.session_transaction() as sess:
             sess["user"] = {
@@ -464,6 +473,7 @@ class TestSubmissionEmail:
                 "email": "manager@example.com",
                 "oid": "manager-oid",
                 "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
             }
 
         class FailingSMTP:
@@ -488,9 +498,53 @@ class TestSubmissionEmail:
         monkeypatch.setattr(app_module, "SMTP_USERNAME", "xxx@euro-fusion.org")
         monkeypatch.setattr(app_module, "SMTP_PASSWORD", "yyy")
 
-        response = client.post(f"/entries/{entry_id}/submit", follow_redirects=True)
+        response = client.post(
+            f"/entries/{entry_id}/edit_manager",
+            data={
+                "manager_objective_comment": "Updated manager objective",
+                "manager_abilities_comment": "Updated manager abilities",
+                "manager_efficiency_comment": "Updated manager efficiency",
+                "goals_2026": "Updated goals",
+                "manager_general_comments": "Updated manager general",
+            },
+            follow_redirects=True,
+        )
         assert response.status_code == 200
         assert b"summary email could not be sent" in response.data
+
+        with app.app_context():
+            finalized_entry = database.session.get(Entry, entry_id)
+            assert finalized_entry is not None
+            assert finalized_entry.workflow_status == STATUS_FINALIZED
+
+    def test_submit_entry_does_not_depend_on_email_delivery(self, client, monkeypatch):
+        """Test submit route updates workflow without attempting SMTP delivery."""
+
+        entry_id = self._create_created_entry()
+
+        with app.app_context():
+            entry = database.session.get(Entry, entry_id)
+            assert entry is not None
+            entry.workflow_status = STATUS_FINALIZED
+            database.session.commit()
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Manager User",
+                "email": "manager@example.com",
+                "oid": "manager-oid",
+                "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
+            }
+
+        class FailIfConstructedSMTP:
+            def __init__(self, host, port, timeout):
+                raise AssertionError("SMTP should not be used by submit route")
+
+        monkeypatch.setattr(app_module.smtplib, "SMTP", FailIfConstructedSMTP)
+
+        response = client.post(f"/entries/{entry_id}/submit")
+        assert response.status_code == 302
 
         with app.app_context():
             submitted_entry = database.session.get(Entry, entry_id)

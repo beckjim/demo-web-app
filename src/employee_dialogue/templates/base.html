@@ -181,6 +181,25 @@
       font-weight: 600;
     }
 
+    .header-user {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: right;
+    }
+
+    .header-user-name {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .header-user-meta {
+      opacity: 0.9;
+    }
+
     .header-actions span {
       opacity: 0.9;
     }
@@ -385,36 +404,7 @@
     }
 
     .user-display-name {
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: background-color 0.2s ease;
-    }
-
-    .user-display-name:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    #user-info-popup {
-      position: fixed;
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      box-shadow: var(--shadow);
-      z-index: 1000;
-      min-width: 250px;
-    }
-
-    #user-info-popup p {
-      margin: 6px 0;
-      font-size: 14px;
-    }
-
-    #user-info-popup strong {
-      display: inline-block;
-      min-width: 80px;
-      color: var(--accent);
+      padding: 0;
     }
   </style>
 </head>
@@ -427,8 +417,12 @@
     </div>
     <div class="header-actions">
       {% if session.get('user') %}
-      <span class="user-display-name" id="user-display-name">{{ session['user']['name'] or session['user']['email']
-        }}</span>
+      <div class="header-user">
+        <span class="header-user-name user-display-name">{{ session['user']['name'] or session['user']['email'] }}</span>
+        <span class="header-user-meta">Email: {{ session['user']['email'] or 'Not available' }}</span>
+        <span class="header-user-meta">Manager: {{ session['user']['manager_name'] or 'Not available' }}</span>
+        <span class="header-user-meta">Program manager: {{ session['user']['program_manager_name'] or 'Not available' }}</span>
+      </div>
       <a class="button-link" href="{{ url_for('logout') }}">Sign out</a>
       {% else %}
       <a class="button-link" href="{{ url_for('login') }}">Sign in with Microsoft</a>
@@ -447,41 +441,8 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
-  <div id="user-info-popup" style="display: none;">
-    {% if session.get('user') %}
-    <p><strong>Email:</strong><br>{{ session['user']['email'] }}</p>
-    <p><strong>Manager:</strong><br>{{ session['user']['manager_name'] or 'Not available' }}</p>
-    <p><strong>Program manager:</strong><br>{{ session['user']['program_manager_name'] or 'Not available' }}</p>
-    {% endif %}
-  </div>
   <script>
     function initializeTabs() {
-      // User info popup functionality
-      const userDisplayNameBtn = document.getElementById('user-display-name');
-      const userInfoPopup = document.getElementById('user-info-popup');
-
-      if (userDisplayNameBtn && userInfoPopup) {
-        userDisplayNameBtn.addEventListener('click', function (event) {
-          event.stopPropagation();
-          const isVisible = userInfoPopup.style.display === 'block';
-          userInfoPopup.style.display = isVisible ? 'none' : 'block';
-
-          if (!isVisible) {
-            // Position the popup below the user name
-            const rect = userDisplayNameBtn.getBoundingClientRect();
-            userInfoPopup.style.top = (rect.bottom + 8) + 'px';
-            userInfoPopup.style.left = (rect.left) + 'px';
-          }
-        });
-
-        // Close popup when clicking outside
-        document.addEventListener('click', function (event) {
-          if (!userDisplayNameBtn.contains(event.target) && !userInfoPopup.contains(event.target)) {
-            userInfoPopup.style.display = 'none';
-          }
-        });
-      }
-
       // Tab functionality
       document.querySelectorAll('[data-tab-root]').forEach(function (root) {
         var buttons = root.querySelectorAll('button[data-tab-target]');

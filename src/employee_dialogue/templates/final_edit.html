@@ -36,14 +36,14 @@
                 <label class="comment-label" for="objective_comment">Comments to the assessment of Objectives *</label>
                 <p>Mandatory in all cases, base your comments on the goals of the previous year. If you selected
                     "Exceeded objective", justify the choice.</p>
-                <textarea id="objective_comment" name="objective_comment" readonly
+                <textarea id="objective_comment" name="objective_comment" maxlength="1000" readonly
                     required>{{ entry.objective_comment }}</textarea>
             </div>
             <div>
                 <label class="comment-label" for="manager_objective_comment">Comments from Manager to self assessment
                     related to Objectives *</label>
                 <p>Manager's feedback on the employee's objective assessment.</p>
-                <textarea id="manager_objective_comment" name="manager_objective_comment"
+                <textarea id="manager_objective_comment" name="manager_objective_comment" maxlength="1000"
                     required>{{ entry.manager_objective_comment }}</textarea>
             </div>
         </fieldset>
@@ -89,14 +89,14 @@
                     above, justify your choice. *</label>
                 <p>If there are no comments or justification, please write N/A (not applicable).
                 </p>
-                <textarea id="abilities_comment" name="abilities_comment" readonly
+                <textarea id="abilities_comment" name="abilities_comment" maxlength="1000" readonly
                     required>{{ entry.abilities_comment }}</textarea>
             </div>
             <div>
                 <label class="comment-label" for="manager_abilities_comment">Comments from Manager to self assessment
                     related to Abilities *</label>
                 <p>Manager's feedback on the employee's abilities assessment.</p>
-                <textarea id="manager_abilities_comment" name="manager_abilities_comment"
+                <textarea id="manager_abilities_comment" name="manager_abilities_comment" maxlength="1000"
                     required>{{ entry.manager_abilities_comment }}</textarea>
             </div>
         </fieldset>
@@ -142,14 +142,14 @@
                     efficiency question
                     above, justify your choice. *</label>
                 <p>If there are no comments or justification, please write N/A (not applicable).</p>
-                <textarea id="efficiency_comment" name="efficiency_comment" readonly
+                <textarea id="efficiency_comment" name="efficiency_comment" maxlength="1000" readonly
                     required>{{ entry.efficiency_comment }}</textarea>
             </div>
             <div>
                 <label class="comment-label" for="manager_efficiency_comment">Comments from Manager to self assessment
                     related to Efficiency *</label>
                 <p>Manager's feedback on the employee's efficiency assessment.</p>
-                <textarea id="manager_efficiency_comment" name="manager_efficiency_comment"
+                <textarea id="manager_efficiency_comment" name="manager_efficiency_comment" maxlength="1000"
                     required>{{ entry.manager_efficiency_comment }}</textarea>
             </div>
         </fieldset>
@@ -194,7 +194,7 @@
                     conduct question
                     above, justify your choice. *</label>
                 <p>If there are no comments or justification, please write N/A (not applicable).</p>
-                <textarea id="conduct_comment" name="conduct_comment" readonly
+                <textarea id="conduct_comment" name="conduct_comment" maxlength="1000" readonly
                     required>{{ entry.conduct_comment }}</textarea>
             </div>
         </fieldset>
@@ -225,7 +225,7 @@
                 manager(s)? In case you have wishes for potential training or changes in working conditions, please
                 address them in this section</p>
             <div>
-                <textarea id="general_comments" name="general_comments" readonly
+                <textarea id="general_comments" name="general_comments" maxlength="1000" readonly
                     required>{{ entry.general_comments }}</textarea>
             </div>
         </fieldset>
@@ -234,7 +234,7 @@
             <legend>Goals/objectives for 2026 *</legend>
             <p>Employee's goals and objectives for the upcoming year.</p>
             <div>
-                <textarea id="goals_2026" name="goals_2026" required>{{ entry.goals_2026 }}</textarea>
+                <textarea id="goals_2026" name="goals_2026" maxlength="1000" required>{{ entry.goals_2026 }}</textarea>
             </div>
         </fieldset>
 
@@ -242,7 +242,7 @@
             <legend>General Comments from Manager *</legend>
             <p>Manager's overall feedback and comments on the employee's performance assessment.</p>
             <div>
-                <textarea id="manager_general_comments" name="manager_general_comments"
+                <textarea id="manager_general_comments" name="manager_general_comments" maxlength="1000"
                     required>{{ entry.manager_general_comments }}</textarea>
             </div>
         </fieldset>

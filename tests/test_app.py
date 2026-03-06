@@ -5,7 +5,10 @@ import pytest
 import employee_dialogue as app_module
 
 from employee_dialogue import ABILITY_CHOICES
+from employee_dialogue import COMMENT_MAX_LENGTH
 from employee_dialogue import OBJECTIVE_CHOICES
+from employee_dialogue import STATUS_APPROVED
+from employee_dialogue import STATUS_CREATED
 from employee_dialogue import STATUS_FINALIZED
 from employee_dialogue import STATUS_SUBMITTED
 from employee_dialogue import Entry
@@ -326,14 +329,14 @@ class TestRoutes:
 
         response = authenticated_session.post(f"/entries/{entry_id}/delete", follow_redirects=True)
         assert response.status_code == 200
-        assert b"Testing mode: deleting a self-assessment finalized with manager is temporarily enabled." in response.data
+        assert b"Testing mode: deleting a self-assessment in any workflow status is temporarily enabled." in response.data
 
         with app.app_context():
             deleted_entry = database.session.get(Entry, entry_id)
             assert deleted_entry is None
 
-    def test_delete_submitted_entry_still_blocked(self, authenticated_session):
-        """Test submitted entries remain protected from delete."""
+    def test_delete_submitted_entry_allowed_for_testing(self, authenticated_session):
+        """Test temporary testing override allows deleting submitted entries."""
         with app.app_context():
             entry = Entry(
                 name="Test User",
@@ -362,11 +365,47 @@ class TestRoutes:
 
         response = authenticated_session.post(f"/entries/{entry_id}/delete", follow_redirects=True)
         assert response.status_code == 200
-        assert b"Cannot delete this self-assessment because it has been submitted to the program manager." in response.data
+        assert b"Testing mode: deleting a self-assessment in any workflow status is temporarily enabled." in response.data
 
         with app.app_context():
-            persisted_entry = database.session.get(Entry, entry_id)
-            assert persisted_entry is not None
+            deleted_entry = database.session.get(Entry, entry_id)
+            assert deleted_entry is None
+
+    def test_delete_approved_entry_allowed_for_testing(self, authenticated_session):
+        """Test temporary testing override allows deleting approved entries."""
+        with app.app_context():
+            entry = Entry(
+                name="Test User",
+                email="test@example.com",
+                manager_name="Test Manager",
+                objective_rating="Achieved objective",
+                objective_comment="Test",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Test",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Test",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Test",
+                general_comments="Test",
+                workflow_status=STATUS_APPROVED,
+            )
+            database.session.add(entry)
+            database.session.commit()
+            entry_id = entry.id
+
+        response = authenticated_session.post(f"/entries/{entry_id}/delete", follow_redirects=True)
+        assert response.status_code == 200
+        assert b"Testing mode: deleting a self-assessment in any workflow status is temporarily enabled." in response.data
+
+        with app.app_context():
+            deleted_entry = database.session.get(Entry, entry_id)
+            assert deleted_entry is None
 
     def test_login_route(self, client):
         """Test login route redirects to Microsoft."""
@@ -383,6 +422,99 @@ class TestRoutes:
 
 class TestFormValidation:
     """Test form field validation."""
+
+    def test_create_rejects_comment_longer_than_limit(self, authenticated_session):
+        """Test create rejects comments longer than COMMENT_MAX_LENGTH."""
+
+        too_long_comment = "x" * (COMMENT_MAX_LENGTH + 1)
+        response = authenticated_session.post(
+            "/entries",
+            data={
+                "objective_rating": "Achieved objective",
+                "objective_comment": too_long_comment,
+                "technical_rating": "Meets expectations",
+                "project_rating": "Meets expectations",
+                "methodology_rating": "Meets expectations",
+                "abilities_comment": "Test",
+                "efficiency_collaboration": "Meets expectations",
+                "efficiency_ownership": "Meets expectations",
+                "efficiency_resourcefulness": "Meets expectations",
+                "efficiency_comment": "Test",
+                "conduct_mutual_trust": "Meets expectations",
+                "conduct_proactivity": "Meets expectations",
+                "conduct_leadership": "N/A",
+                "conduct_comment": "Test",
+                "general_comments": "Test",
+                "feedback_received": "Yes",
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"Comment fields must be 1000 characters or fewer" in response.data
+        with app.app_context():
+            assert Entry.query.count() == 0
+
+    def test_edit_rejects_comment_longer_than_limit(self, authenticated_session):
+        """Test edit rejects comments longer than COMMENT_MAX_LENGTH."""
+
+        with app.app_context():
+            entry = Entry(
+                name="Test User",
+                email="test@example.com",
+                manager_name="",
+                objective_rating="Achieved objective",
+                objective_comment="Test",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Test",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Test",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Test",
+                general_comments="Original general comments",
+                feedback_received="Yes",
+            )
+            database.session.add(entry)
+            database.session.commit()
+            entry_id = entry.id
+
+        too_long_comment = "x" * (COMMENT_MAX_LENGTH + 1)
+        response = authenticated_session.post(
+            f"/entries/{entry_id}/edit",
+            data={
+                "objective_rating": "Achieved objective",
+                "objective_comment": "Test",
+                "technical_rating": "Meets expectations",
+                "project_rating": "Meets expectations",
+                "methodology_rating": "Meets expectations",
+                "abilities_comment": "Test",
+                "efficiency_collaboration": "Meets expectations",
+                "efficiency_ownership": "Meets expectations",
+                "efficiency_resourcefulness": "Meets expectations",
+                "efficiency_comment": "Test",
+                "conduct_mutual_trust": "Meets expectations",
+                "conduct_proactivity": "Meets expectations",
+                "conduct_leadership": "N/A",
+                "conduct_comment": "Test",
+                "general_comments": too_long_comment,
+                "feedback_received": "Yes",
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"Comment fields must be 1000 characters or fewer" in response.data
+
+        with app.app_context():
+            persisted_entry = database.session.get(Entry, entry_id)
+            assert persisted_entry is not None
+            assert persisted_entry.general_comments == "Original general comments"
 
     def test_invalid_objective_rating(self, authenticated_session):
         """Test rejection of invalid objective rating."""
@@ -435,6 +567,116 @@ class TestFormValidation:
 
 class TestSubmissionEmail:
     """Test submission email behavior."""
+
+    def test_manager_edit_rejects_comment_longer_than_limit(self, client):
+        """Test manager finalize form rejects comments longer than COMMENT_MAX_LENGTH."""
+
+        entry_id = self._create_created_entry()
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Manager User",
+                "email": "manager@example.com",
+                "oid": "manager-oid",
+                "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
+            }
+
+        too_long_comment = "x" * (COMMENT_MAX_LENGTH + 1)
+        response = client.post(
+            f"/entries/{entry_id}/edit_manager",
+            data={
+                "manager_objective_comment": "Updated manager objective",
+                "manager_abilities_comment": "Updated manager abilities",
+                "manager_efficiency_comment": "Updated manager efficiency",
+                "goals_2026": "Updated goals",
+                "manager_general_comments": too_long_comment,
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"Comment fields must be 1000 characters or fewer" in response.data
+
+        with app.app_context():
+            unchanged_entry = database.session.get(Entry, entry_id)
+            assert unchanged_entry is not None
+            assert unchanged_entry.workflow_status == STATUS_CREATED
+            assert unchanged_entry.manager_general_comments == "Manager general"
+
+    def test_manager_edit_rejects_goals_longer_than_limit(self, client):
+        """Test manager finalize form rejects goals longer than COMMENT_MAX_LENGTH."""
+
+        entry_id = self._create_created_entry()
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Manager User",
+                "email": "manager@example.com",
+                "oid": "manager-oid",
+                "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
+            }
+
+        too_long_goals = "x" * (COMMENT_MAX_LENGTH + 1)
+        response = client.post(
+            f"/entries/{entry_id}/edit_manager",
+            data={
+                "manager_objective_comment": "Updated manager objective",
+                "manager_abilities_comment": "Updated manager abilities",
+                "manager_efficiency_comment": "Updated manager efficiency",
+                "goals_2026": too_long_goals,
+                "manager_general_comments": "Updated manager general",
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert b"Comment fields must be 1000 characters or fewer" in response.data
+
+        with app.app_context():
+            unchanged_entry = database.session.get(Entry, entry_id)
+            assert unchanged_entry is not None
+            assert unchanged_entry.workflow_status == STATUS_CREATED
+            assert unchanged_entry.goals_2026 == "Goals"
+
+    def test_assessment_email_body_preserves_multiline_comments(self):
+        """Test summary email keeps user-entered line breaks in multiline fields."""
+
+        entry = Entry(
+            name="Employee User",
+            email="employee@example.com",
+            manager_name="Manager User",
+            objective_rating="Achieved objective",
+            objective_comment="Line one\r\nLine two",
+            manager_objective_comment="Mgr one\nMgr two",
+            technical_rating="Meets expectations",
+            project_rating="Meets expectations",
+            methodology_rating="Meets expectations",
+            abilities_comment="A1\nA2",
+            manager_abilities_comment="MA1",
+            efficiency_collaboration="Meets expectations",
+            efficiency_ownership="Meets expectations",
+            efficiency_resourcefulness="Meets expectations",
+            efficiency_comment="E1\nE2",
+            manager_efficiency_comment="ME1",
+            conduct_mutual_trust="Meets expectations",
+            conduct_proactivity="Meets expectations",
+            conduct_leadership="N/A",
+            conduct_comment="C1\nC2",
+            general_comments="G1\nG2",
+            goals_2026="Goal1\nGoal2",
+            manager_general_comments="MG1\nMG2",
+            feedback_received="Yes",
+            workflow_status=STATUS_FINALIZED,
+        )
+
+        body = app_module._assessment_email_body(entry)
+
+        assert "- Employee Comment:\n  Line one\n  Line two" in body
+        assert "- Manager Comment:\n  Mgr one\n  Mgr two" in body
+        assert "- Employee General Comments:\n  G1\n  G2" in body
+        assert "- Goals 2026:\n  Goal1\n  Goal2" in body
 
     def _create_created_entry(self) -> int:
         with app.app_context():

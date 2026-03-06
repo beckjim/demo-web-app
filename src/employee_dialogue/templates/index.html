@@ -35,14 +35,14 @@
         {% endif %}
         <div class="summary">
           <div><strong>Objective rating:</strong> {{ entry.objective_rating }}</div>
-          <div><strong>Objective comments:</strong> {{ entry.objective_comment }}</div>
+          <div><strong>Objective comments:</strong><br><span class="preserve-lines">{{ entry.objective_comment }}</span></div>
           <div><strong>Abilities:</strong>
             <ul>
               <li>Technical/functional skills: {{ entry.technical_rating }}</li>
               <li>Project management: {{ entry.project_rating }}</li>
               <li>Methodology/processes competencies: {{ entry.methodology_rating }}</li>
             </ul>
-            <div><strong>Abilities comments:</strong> {{ entry.abilities_comment }}</div>
+            <div><strong>Abilities comments:</strong><br><span class="preserve-lines">{{ entry.abilities_comment }}</span></div>
           </div>
           <div><strong>Efficiency:</strong>
             <ul>
@@ -50,7 +50,7 @@
               <li>Ownership: {{ entry.efficiency_ownership }}</li>
               <li>Resourcefulness: {{ entry.efficiency_resourcefulness }}</li>
             </ul>
-            <div><strong>Efficiency comments:</strong> {{ entry.efficiency_comment }}</div>
+            <div><strong>Efficiency comments:</strong><br><span class="preserve-lines">{{ entry.efficiency_comment }}</span></div>
           </div>
           <div><strong>Conduct in the service:</strong>
             <ul>
@@ -58,24 +58,24 @@
               <li>Proactivity: {{ entry.conduct_proactivity }}</li>
               <li>Leadership: {{ entry.conduct_leadership }}</li>
             </ul>
-            <div><strong>Conduct comments:</strong> {{ entry.conduct_comment }}</div>
+            <div><strong>Conduct comments:</strong><br><span class="preserve-lines">{{ entry.conduct_comment }}</span></div>
           </div>
           <div><strong>Feedback received:</strong> {{ entry.feedback_received or 'N/A' }}</div>
-          <div><strong>General comments:</strong> {{ entry.general_comments }}</div>
+          <div><strong>General comments:</strong><br><span class="preserve-lines">{{ entry.general_comments }}</span></div>
         </div>
         <div class="actions">
           {% if own_status_code == status_created %}
           <a class="button-link" href="{{ url_for('edit_entry', entry_id=entry.id) }}">Edit</a>
           {% endif %}
-          {% if own_status_code == status_created or (allow_finalized_delete_testing and own_status_code == status_finalized) %}
+          {% if own_status_code == status_created or allow_finalized_delete_testing %}
           <form method="post" action="{{ url_for('delete_entry', entry_id=entry.id) }}"
             onsubmit="return confirm('Delete this entry?');">
             <button class="secondary" type="submit">Delete</button>
           </form>
           {% endif %}
         </div>
-        {% if allow_finalized_delete_testing and own_status_code == status_finalized %}
-        <p style="margin-top: 8px; color: #92400e;"><strong>Testing note:</strong> Deleting a self-assessment finalized with manager is temporarily enabled for testing.</p>
+        {% if allow_finalized_delete_testing and own_status_code != status_created %}
+        <p style="margin-top: 8px; color: #92400e;"><strong>Testing note:</strong> Deleting a self-assessment in any workflow status is temporarily enabled for testing.</p>
         {% endif %}
       </div>
       {% endfor %}
@@ -145,14 +145,14 @@
                 <small>{{ row.entry.updated_at|german_time }}</small>
                 <div class="summary">
                   <div><strong>Objective rating:</strong> {{ row.entry.objective_rating }}</div>
-                  <div><strong>Objective comments:</strong> {{ row.entry.objective_comment }}</div>
+                  <div><strong>Objective comments:</strong><br><span class="preserve-lines">{{ row.entry.objective_comment }}</span></div>
                   <div><strong>Abilities:</strong>
                     <ul>
                       <li>Technical/functional skills: {{ row.entry.technical_rating }}</li>
                       <li>Project management: {{ row.entry.project_rating }}</li>
                       <li>Methodology/processes competencies: {{ row.entry.methodology_rating }}</li>
                     </ul>
-                    <div><strong>Abilities comments:</strong> {{ row.entry.abilities_comment }}</div>
+                    <div><strong>Abilities comments:</strong><br><span class="preserve-lines">{{ row.entry.abilities_comment }}</span></div>
                   </div>
                   <div><strong>Efficiency:</strong>
                     <ul>
@@ -160,7 +160,7 @@
                       <li>Ownership: {{ row.entry.efficiency_ownership }}</li>
                       <li>Resourcefulness: {{ row.entry.efficiency_resourcefulness }}</li>
                     </ul>
-                    <div><strong>Efficiency comments:</strong> {{ row.entry.efficiency_comment }}</div>
+                    <div><strong>Efficiency comments:</strong><br><span class="preserve-lines">{{ row.entry.efficiency_comment }}</span></div>
                   </div>
                   <div><strong>Conduct in the service:</strong>
                     <ul>
@@ -168,10 +168,10 @@
                       <li>Proactivity: {{ row.entry.conduct_proactivity }}</li>
                       <li>Leadership: {{ row.entry.conduct_leadership }}</li>
                     </ul>
-                    <div><strong>Conduct comments:</strong> {{ row.entry.conduct_comment }}</div>
+                    <div><strong>Conduct comments:</strong><br><span class="preserve-lines">{{ row.entry.conduct_comment }}</span></div>
                   </div>
                   <div><strong>Feedback received:</strong> {{ row.entry.feedback_received or 'N/A' }}</div>
-                  <div><strong>General comments:</strong> {{ row.entry.general_comments }}</div>
+                  <div><strong>General comments:</strong><br><span class="preserve-lines">{{ row.entry.general_comments }}</span></div>
                 </div>
               </div>
             </td>

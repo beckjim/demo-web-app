@@ -132,6 +132,8 @@ ABILITY_CHOICES = [
     "N/A",
 ]
 
+COMMENT_MAX_LENGTH = 1000
+
 STATUS_NOT_CREATED = "not_created_yet"
 STATUS_CREATED = "created"
 STATUS_FINALIZED = "finalized_with_manager"
@@ -162,7 +164,7 @@ STATUS_CLASSES = {
     STATUS_APPROVED: "status-approved",
 }
 
-# Temporary testing override: allow owners to delete entries finalized with manager.
+# Temporary testing override: allow owners to delete entries in any workflow status.
 # Set ALLOW_FINALIZED_DELETE_TESTING=0 (or false/off/no) to disable.
 ALLOW_FINALIZED_SELF_ASSESSMENT_DELETE_FOR_TESTING = (
     os.environ.get("ALLOW_FINALIZED_DELETE_TESTING", "1").strip().lower()
@@ -727,6 +729,12 @@ def _validate_choice(value: str, choices: list[str]) -> bool:
     return value in choices
 
 
+def _find_too_long_text_fields(fields: dict[str, str]) -> list[str]:
+    """Return field labels for text fields exceeding COMMENT_MAX_LENGTH."""
+
+    return [label for label, value in fields.items() if len(value) > COMMENT_MAX_LENGTH]
+
+
 def _can_access_entry(entry: Entry, session_user: dict[str, Any]) -> bool:
     """Return True if session user owns the entry (manager-only access is denied)."""
 
@@ -758,6 +766,25 @@ def _assessment_email_subject(entry: Entry) -> str:
     return f"Assessment finalized: {entry.name}"
 
 
+def _normalize_newlines(value: str) -> str:
+    """Normalize CRLF/CR line endings to LF."""
+
+    return value.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _email_multiline_field(label: str, value: str) -> list[str]:
+    """Render a labeled email field while preserving user-entered line breaks."""
+
+    normalized = _normalize_newlines(value or "").strip()
+    if not normalized:
+        return [f"- {label}:", "  N/A"]
+
+    parts = normalized.split("\n")
+    lines = [f"- {label}:"]
+    lines.extend(f"  {part}" for part in parts)
+    return lines
+
+
 def _assessment_email_body(entry: Entry) -> str:
     """Return plain-text assessment summary for email delivery."""
 
@@ -773,35 +800,55 @@ def _assessment_email_body(entry: Entry) -> str:
         "",
         "Objective",
         f"- Rating: {entry.objective_rating}",
-        f"- Employee Comment: {entry.objective_comment}",
-        f"- Manager Comment: {entry.manager_objective_comment or 'N/A'}",
+    ]
+    lines.extend(_email_multiline_field("Employee Comment", entry.objective_comment))
+    lines.extend(_email_multiline_field("Manager Comment", entry.manager_objective_comment or ""))
+    lines.extend(
+        [
         "",
         "Abilities",
         f"- Technical: {entry.technical_rating}",
         f"- Project: {entry.project_rating}",
         f"- Methodology: {entry.methodology_rating}",
-        f"- Employee Comment: {entry.abilities_comment}",
-        f"- Manager Comment: {entry.manager_abilities_comment or 'N/A'}",
+        ]
+    )
+    lines.extend(_email_multiline_field("Employee Comment", entry.abilities_comment))
+    lines.extend(_email_multiline_field("Manager Comment", entry.manager_abilities_comment or ""))
+    lines.extend(
+        [
         "",
         "Efficiency",
         f"- Collaboration: {entry.efficiency_collaboration}",
         f"- Ownership: {entry.efficiency_ownership}",
         f"- Resourcefulness: {entry.efficiency_resourcefulness}",
-        f"- Employee Comment: {entry.efficiency_comment}",
-        f"- Manager Comment: {entry.manager_efficiency_comment or 'N/A'}",
+        ]
+    )
+    lines.extend(_email_multiline_field("Employee Comment", entry.efficiency_comment))
+    lines.extend(_email_multiline_field("Manager Comment", entry.manager_efficiency_comment or ""))
+    lines.extend(
+        [
         "",
         "Conduct",
         f"- Mutual trust: {entry.conduct_mutual_trust}",
         f"- Proactivity: {entry.conduct_proactivity}",
         f"- Leadership: {entry.conduct_leadership}",
-        f"- Comment: {entry.conduct_comment}",
+        ]
+    )
+    lines.extend(_email_multiline_field("Comment", entry.conduct_comment))
+    lines.extend(
+        [
         "",
         "General",
-        f"- Employee General Comments: {entry.general_comments}",
-        f"- Manager General Comments: {entry.manager_general_comments or 'N/A'}",
-        f"- Goals 2026: {entry.goals_2026 or 'N/A'}",
+        ]
+    )
+    lines.extend(_email_multiline_field("Employee General Comments", entry.general_comments))
+    lines.extend(_email_multiline_field("Manager General Comments", entry.manager_general_comments or ""))
+    lines.extend(_email_multiline_field("Goals 2026", entry.goals_2026 or ""))
+    lines.extend(
+        [
         f"- Feedback Received: {entry.feedback_received or 'N/A'}",
-    ]
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -919,6 +966,27 @@ def create_entry() -> Response:
             email or "",
         )
         flash("All fields must be completed with valid options", "error")
+        return redirect(url_for("index"))
+
+    too_long_comment_fields = _find_too_long_text_fields(
+        {
+            "Objective comments": objective_comment,
+            "Abilities comments": abilities_comment,
+            "Efficiency comments": efficiency_comment,
+            "Conduct comments": conduct_comment,
+            "General comments": general_comments,
+        }
+    )
+    if too_long_comment_fields:
+        app.logger.warning(
+            "Create entry comment length validation failed for user=%s fields=%s",
+            name or "unknown",
+            ", ".join(too_long_comment_fields),
+        )
+        flash(
+            f"Comment fields must be {COMMENT_MAX_LENGTH} characters or fewer: {', '.join(too_long_comment_fields)}",
+            "error",
+        )
         return redirect(url_for("index"))
 
     existing_entry = (
@@ -1069,6 +1137,28 @@ def edit_entry(entry_id: int) -> Union[str, Response]:
             flash("All fields must be completed with valid options", "error")
             return redirect(url_for("edit_entry", entry_id=entry_id))
 
+        too_long_comment_fields = _find_too_long_text_fields(
+            {
+                "Objective comments": objective_comment,
+                "Abilities comments": abilities_comment,
+                "Efficiency comments": efficiency_comment,
+                "Conduct comments": conduct_comment,
+                "General comments": general_comments,
+            }
+        )
+        if too_long_comment_fields:
+            app.logger.warning(
+                "Edit entry comment length validation failed entry_id=%s requester=%s fields=%s",
+                entry.id,
+                session_user.get("name") or "unknown",
+                ", ".join(too_long_comment_fields),
+            )
+            flash(
+                f"Comment fields must be {COMMENT_MAX_LENGTH} characters or fewer: {', '.join(too_long_comment_fields)}",
+                "error",
+            )
+            return redirect(url_for("edit_entry", entry_id=entry_id))
+
         entry.name = name
         entry.email = email
         entry.manager_name = manager_name
@@ -1124,12 +1214,10 @@ def delete_entry(entry_id: int) -> Response:
         return redirect(url_for("index"))
 
     # Check workflow status - only allow deleting if created.
-    # Temporary test mode can also allow finalized self-assessments.
+    # Temporary test mode can also allow deleting in any workflow status.
     workflow_status = entry.workflow_status or STATUS_CREATED
-    can_delete_finalized_for_testing = (
-        ALLOW_FINALIZED_SELF_ASSESSMENT_DELETE_FOR_TESTING and workflow_status == STATUS_FINALIZED
-    )
-    if workflow_status != STATUS_CREATED and not can_delete_finalized_for_testing:
+    can_delete_any_status_for_testing = ALLOW_FINALIZED_SELF_ASSESSMENT_DELETE_FOR_TESTING
+    if workflow_status != STATUS_CREATED and not can_delete_any_status_for_testing:
         app.logger.info(
             "Delete entry blocked by workflow status entry_id=%s status=%s requester=%s",
             entry.id,
@@ -1146,9 +1234,9 @@ def delete_entry(entry_id: int) -> Response:
             flash("Cannot delete this self-assessment at this stage.", "error")
         return redirect(url_for("index"))
 
-    if can_delete_finalized_for_testing:
+    if can_delete_any_status_for_testing and workflow_status != STATUS_CREATED:
         flash(
-            "Testing mode: deleting a self-assessment finalized with manager is temporarily enabled.",
+            "Testing mode: deleting a self-assessment in any workflow status is temporarily enabled.",
             "info",
         )
 
@@ -1256,6 +1344,28 @@ def edit_manager_entry(entry_id: int) -> Union[str, Response]:
                 session_user.get("name") or "unknown",
             )
             flash("All manager fields must be completed", "error")
+            return redirect(url_for("edit_manager_entry", entry_id=entry_id))
+
+        too_long_comment_fields = _find_too_long_text_fields(
+            {
+                "Manager objective comments": manager_objective_comment,
+                "Manager abilities comments": manager_abilities_comment,
+                "Manager efficiency comments": manager_efficiency_comment,
+                "Goals 2026": goals_2026,
+                "Manager general comments": manager_general_comments,
+            }
+        )
+        if too_long_comment_fields:
+            app.logger.warning(
+                "Manager edit comment length validation failed entry_id=%s requester=%s fields=%s",
+                entry.id,
+                session_user.get("name") or "unknown",
+                ", ".join(too_long_comment_fields),
+            )
+            flash(
+                f"Comment fields must be {COMMENT_MAX_LENGTH} characters or fewer: {', '.join(too_long_comment_fields)}",
+                "error",
+            )
             return redirect(url_for("edit_manager_entry", entry_id=entry_id))
 
         previous_status = entry.workflow_status or STATUS_CREATED

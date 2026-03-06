@@ -49,7 +49,7 @@ Visit [Getting Started](getting-started.md) for detailed setup instructions.
 ## Project Status
 
 - **Version**: 0.1.0
-- **Python**: 3.9+
+- **Python**: 3.14
 - **License**: MIT
 - **Status**: Active Development
 

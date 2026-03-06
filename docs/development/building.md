@@ -287,7 +287,7 @@ docker build -t employee-dialogue . 2>&1 | tail -20
 
 ```bash
 # Check Python version
-python --version  # Should be 3.9+
+python --version  # Should be 3.14
 
 # Try wheel instead of sdist
 pip install --only-binary :all: employee_dialogue

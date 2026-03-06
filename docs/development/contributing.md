@@ -67,7 +67,7 @@ uv run ruff format src/ tests/
 ### Standards
 
 - **Line length:** 100 characters
-- **Python version:** 3.9+
+- **Python version:** 3.14
 - **Import style:** One import per line
 - **Type hints:** Recommended for functions
 

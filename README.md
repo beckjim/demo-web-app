@@ -3,7 +3,7 @@
 Flask app for performance review self-assessments and manager evaluations with Microsoft 365 authentication.
 
 ## Prerequisites
-- Python 3.9+
+- Python 3.14
 - pip
 
 ## Setup (uv)
@@ -88,6 +88,8 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for full documentation setup guide.
 
 ## Testing
 The application includes comprehensive unit tests. See [TESTING.md](TESTING.md) for details.
+
+Security testing guidance is available in [SECURITY_TESTING.md](SECURITY_TESTING.md).
 
 Quick start:
 ```bash

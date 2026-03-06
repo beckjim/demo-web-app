@@ -6,7 +6,7 @@ Detailed installation instructions for different environments.
 
 | Requirement    | Version | Notes                         |
 | -------------- | ------- | ----------------------------- |
-| Python         | 3.9+    | 3.11+ recommended             |
+| Python         | 3.14    | Required                      |
 | SQLite         | 3.0+    | Bundled with Python           |
 | Modern Browser | Latest  | Chrome, Firefox, Safari, Edge |
 

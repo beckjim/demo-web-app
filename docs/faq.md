@@ -38,7 +38,7 @@ It does NOT store:
 ### Do I need to install anything?
 
 Yes:
-- Python 3.9+
+- Python 3.14
 - Dependencies (automatically installed)
 - Optional: Docker for containerized deployment
 
@@ -121,12 +121,12 @@ Sensitive data is not encrypted at rest by default. Add encryption if required b
 **Minimum:**
 - 1 GB RAM
 - 100 MB disk space
-- Python 3.9
+- Python 3.14
 
 **Recommended (production):**
 - 4 GB RAM
 - 10 GB disk space
-- Python 3.11+
+- Python 3.14
 - Dedicated server or cloud instance
 
 ### Can I run it on a Raspberry Pi?

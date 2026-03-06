@@ -4,7 +4,7 @@ Get up and running with Employee Dialogue in minutes.
 
 ## Prerequisites
 
-- **Python 3.9+**
+- **Python 3.14**
 - **pip** or **uv** package manager
 - **Git** (optional, for cloning)
 - **Microsoft 365 Account** (for authentication testing)

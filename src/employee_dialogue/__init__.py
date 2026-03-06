@@ -5,13 +5,12 @@ import os
 import smtplib
 import uuid
 
+from collections.abc import Callable
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from email.message import EmailMessage
 from functools import wraps
 from typing import Any
-from typing import Callable
-from typing import Union
 from zoneinfo import ZoneInfo
 from zoneinfo import ZoneInfoNotFoundError
 
@@ -82,7 +81,7 @@ _SCHEMA_READY_CHECKED = False
 
 def _utc_now() -> datetime:
     """Return current UTC time with timezone awareness."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 try:
@@ -91,17 +90,17 @@ except ZoneInfoNotFoundError:
     app.logger.warning(
         "Timezone data not available; falling back to UTC. Install tzdata for Europe/Berlin."
     )
-    GERMAN_TZ = timezone.utc
+    GERMAN_TZ = UTC
 
 
-def _format_german_time(value: Union[datetime, None]) -> str:
+def _format_german_time(value: datetime | None) -> str:
     """Format a datetime in German timezone with offset info."""
 
     if value is None:
         return "N/A"
 
     if value.tzinfo is None:
-        value = value.replace(tzinfo=timezone.utc)
+        value = value.replace(tzinfo=UTC)
 
     local_time = value.astimezone(GERMAN_TZ)
     offset = local_time.strftime("%z")
@@ -111,7 +110,7 @@ def _format_german_time(value: Union[datetime, None]) -> str:
 
 
 @app.template_filter("german_time")
-def german_time_filter(value: Union[datetime, None]) -> str:
+def german_time_filter(value: datetime | None) -> str:
     """Jinja filter for German timezone timestamp formatting."""
 
     return _format_german_time(value)
@@ -378,7 +377,7 @@ def _graph_display_name(data: Any) -> str:
     return data.get("displayName") or data.get("mail") or data.get("userPrincipalName") or ""
 
 
-def _graph_get(url: str, access_token: str) -> Union[requests.Response, None]:
+def _graph_get(url: str, access_token: str) -> requests.Response | None:
     """Issue a Microsoft Graph GET request with standard headers and timeout."""
 
     try:
@@ -499,7 +498,7 @@ def _fetch_direct_reports(access_token: str) -> list[dict[str, str]]:
     return reports
 
 
-def _managed_status(entry: Union[Entry, None]) -> str:
+def _managed_status(entry: Entry | None) -> str:
     """Return status code for a managed self-assessment lifecycle."""
 
     if entry is None:
@@ -511,7 +510,7 @@ def _managed_status(entry: Union[Entry, None]) -> str:
     return STATUS_CREATED
 
 
-def _managed_timestamp(entry: Union[Entry, None]) -> str:
+def _managed_timestamp(entry: Entry | None) -> str:
     """Return a display timestamp for managed row state changes."""
 
     if entry and entry.updated_at:
@@ -696,7 +695,7 @@ def refresh_team_members() -> Response:
 
 @app.route("/entries/new", methods=["GET"])
 @login_required
-def new_entry() -> Union[str, Response]:
+def new_entry() -> str | Response:
     """Display the creation form, redirecting to edit if an entry exists."""
 
     session_user = session.get("user", {})
@@ -1040,7 +1039,7 @@ def create_entry() -> Response:
 
 @app.route("/entries/<int:entry_id>/edit", methods=["GET", "POST"])
 @login_required
-def edit_entry(entry_id: int) -> Union[str, Response]:
+def edit_entry(entry_id: int) -> str | Response:
     """Edit an existing entry."""
     entry = Entry.query.get_or_404(entry_id)
 
@@ -1294,7 +1293,7 @@ def finalize_entry(entry_id: int) -> Response:
 
 @app.route("/entries/<int:entry_id>/edit_manager", methods=["GET", "POST"])
 @login_required
-def edit_manager_entry(entry_id: int) -> Union[str, Response]:
+def edit_manager_entry(entry_id: int) -> str | Response:
     """Edit manager comments for an entry (manager only)."""
 
     entry = Entry.query.get_or_404(entry_id)

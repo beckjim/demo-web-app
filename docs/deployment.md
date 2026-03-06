@@ -47,7 +47,7 @@ LOG_LEVEL=INFO
 ### Option 1: Traditional Server
 
 #### Prerequisites
-- Python 3.9+
+- Python 3.14
 - pip or uv
 - Gunicorn
 - Nginx (reverse proxy)
@@ -237,7 +237,7 @@ heroku config:set SMTP_HOST=localhost SMTP_PORT=1587 SMTP_USERNAME=xxx@euro-fusi
 pip install awseb-cli
 
 # 2. Initialize
-eb init -p python-3.11 employee-dialogue
+eb init -p python-3.14 employee-dialogue
 
 # 3. Create environment
 eb create production

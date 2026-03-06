@@ -42,6 +42,16 @@ jobs:
             - name: Run tests
               run: uv run pytest -v
 
+            - name: Filesystem vulnerability scan (Trivy)
+              uses: aquasecurity/trivy-action@0.28.0
+              with:
+                  scan-type: fs
+                  scan-ref: .
+                  vuln-type: os,library
+                  severity: HIGH,CRITICAL
+                  ignore-unfixed: true
+                  exit-code: "1"
+
     build-and-publish:
         needs: test
         runs-on: ubuntu-latest

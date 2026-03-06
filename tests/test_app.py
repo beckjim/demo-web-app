@@ -540,6 +540,200 @@ class TestFormValidation:
         )
         assert response.status_code == 302
 
+
+class TestSecurityControls:
+    """Security-focused route authorization and workflow tampering tests."""
+
+    def test_submit_denied_for_non_manager(self, client):
+        """Direct submit POST should be blocked when requester is not the manager."""
+
+        with app.app_context():
+            entry = Entry(
+                name="Employee User",
+                email="employee@example.com",
+                manager_name="Manager User",
+                objective_rating="Achieved objective",
+                objective_comment="Test",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Test",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Test",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Test",
+                general_comments="Test",
+                workflow_status=STATUS_FINALIZED,
+            )
+            database.session.add(entry)
+            database.session.commit()
+            entry_id = entry.id
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Other User",
+                "email": "other@example.com",
+                "oid": "other-oid",
+                "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
+            }
+
+        response = client.post(f"/entries/{entry_id}/submit", follow_redirects=True)
+        assert response.status_code == 200
+        assert b"You are not allowed to submit this entry." in response.data
+
+        with app.app_context():
+            persisted_entry = database.session.get(Entry, entry_id)
+            assert persisted_entry is not None
+            assert persisted_entry.workflow_status == STATUS_FINALIZED
+
+    def test_submit_blocked_when_entry_not_finalized(self, client):
+        """Direct submit POST should not bypass required finalized state."""
+
+        with app.app_context():
+            entry = Entry(
+                name="Employee User",
+                email="employee@example.com",
+                manager_name="Manager User",
+                objective_rating="Achieved objective",
+                objective_comment="Test",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Test",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Test",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Test",
+                general_comments="Test",
+                workflow_status=STATUS_CREATED,
+            )
+            database.session.add(entry)
+            database.session.commit()
+            entry_id = entry.id
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Manager User",
+                "email": "manager@example.com",
+                "oid": "manager-oid",
+                "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
+            }
+
+        response = client.post(f"/entries/{entry_id}/submit", follow_redirects=True)
+        assert response.status_code == 200
+        assert b"Only finalized entries can be submitted to the program manager." in response.data
+
+        with app.app_context():
+            persisted_entry = database.session.get(Entry, entry_id)
+            assert persisted_entry is not None
+            assert persisted_entry.workflow_status == STATUS_CREATED
+
+    def test_approve_denied_for_non_program_manager(self, client):
+        """Direct approve POST should be blocked when requester is not designated PM."""
+
+        with app.app_context():
+            entry = Entry(
+                name="Employee User",
+                email="employee@example.com",
+                manager_name="Manager User",
+                objective_rating="Achieved objective",
+                objective_comment="Test",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Test",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Test",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Test",
+                general_comments="Test",
+                workflow_status=STATUS_SUBMITTED,
+                program_manager_name="Program Manager",
+            )
+            database.session.add(entry)
+            database.session.commit()
+            entry_id = entry.id
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Not Program Manager",
+                "email": "other@example.com",
+                "oid": "other-oid",
+                "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
+            }
+
+        response = client.post(f"/entries/{entry_id}/approve", follow_redirects=True)
+        assert response.status_code == 200
+        assert b"You are not allowed to approve this entry." in response.data
+
+        with app.app_context():
+            persisted_entry = database.session.get(Entry, entry_id)
+            assert persisted_entry is not None
+            assert persisted_entry.workflow_status == STATUS_SUBMITTED
+
+    def test_approve_blocked_when_entry_not_submitted(self, client):
+        """Direct approve POST should not bypass required submitted state."""
+
+        with app.app_context():
+            entry = Entry(
+                name="Employee User",
+                email="employee@example.com",
+                manager_name="Manager User",
+                objective_rating="Achieved objective",
+                objective_comment="Test",
+                technical_rating="Meets expectations",
+                project_rating="Meets expectations",
+                methodology_rating="Meets expectations",
+                abilities_comment="Test",
+                efficiency_collaboration="Meets expectations",
+                efficiency_ownership="Meets expectations",
+                efficiency_resourcefulness="Meets expectations",
+                efficiency_comment="Test",
+                conduct_mutual_trust="Meets expectations",
+                conduct_proactivity="Meets expectations",
+                conduct_leadership="N/A",
+                conduct_comment="Test",
+                general_comments="Test",
+                workflow_status=STATUS_FINALIZED,
+                program_manager_name="Program Manager",
+            )
+            database.session.add(entry)
+            database.session.commit()
+            entry_id = entry.id
+
+        with client.session_transaction() as sess:
+            sess["user"] = {
+                "name": "Program Manager",
+                "email": "pm@example.com",
+                "oid": "pm-oid",
+                "manager_name": "Program Manager",
+                "program_manager_name": "Program Manager",
+            }
+
+        response = client.post(f"/entries/{entry_id}/approve", follow_redirects=True)
+        assert response.status_code == 200
+        assert b"Only submitted entries can be approved." in response.data
+
+        with app.app_context():
+            persisted_entry = database.session.get(Entry, entry_id)
+            assert persisted_entry is not None
+            assert persisted_entry.workflow_status == STATUS_FINALIZED
+
     def test_invalid_ability_rating(self, authenticated_session):
         """Test rejection of invalid ability rating."""
         response = authenticated_session.post(

@@ -35,7 +35,7 @@ Two tasks are available in VS Code (Ctrl+Shift+P → "Tasks: Run Task"):
 
 Pyright is configured in [pyproject.toml](pyproject.toml) under `[tool.pyright]`:
 
-- **Python Version**: 3.9 (matching project requirement)
+- **Python Version**: 3.14 (matching project requirement)
 - **Type Checking Mode**: basic
 - **Special Settings**: 
   - `reportCallIssue = "warning"` - SQLAlchemy model initialization warnings are downgraded to warnings instead of errors
@@ -51,8 +51,8 @@ The warnings are due to SQLAlchemy's dynamic model initialization using `Column`
 
 - All route handlers have return type annotations (`str`, `Response`, or `Union[str, Response]`)
 - Helper functions have full type annotations
-- Import types from `typing` module for Python 3.9 compatibility
-- Used `Union[X, Y]` instead of `X | Y` syntax for Python 3.9
+- Uses modern Python 3.14 typing features
+- Uses `X | Y` union syntax where appropriate
 
 ## Integration
 

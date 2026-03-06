@@ -42,15 +42,40 @@ jobs:
             - name: Run tests
               run: uv run pytest -v
 
-            - name: Filesystem vulnerability scan (Trivy)
-              uses: aquasecurity/trivy-action@0.28.0
+            - name: Set up Trivy
+              uses: aquasecurity/setup-trivy@v0.2.2
               with:
-                  scan-type: fs
-                  scan-ref: .
-                  vuln-type: os,library
-                  severity: HIGH,CRITICAL
-                  ignore-unfixed: true
-                  exit-code: "1"
+                  trivy-version: v0.56.1
+
+            - name: Filesystem vulnerability scan (Trivy)
+              id: trivy_scan
+              continue-on-error: true
+              run: |
+                  echo "Running Trivy filesystem scan..."
+                  trivy fs \
+                    --scanners vuln \
+                    --vuln-type os,library \
+                    --severity HIGH,CRITICAL \
+                    --ignore-unfixed \
+                    --format table \
+                    --no-progress \
+                    --exit-code 1 \
+                    --output trivy-report.txt \
+                    .
+
+            - name: Upload Trivy report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: trivy-report-test
+                  path: trivy-report.txt
+                  if-no-files-found: warn
+
+            - name: Fail on Trivy findings
+              if: steps.trivy_scan.outcome == 'failure'
+              run: |
+                  echo "Trivy found HIGH/CRITICAL vulnerabilities."
+                  exit 1
 
     build-and-publish:
         needs: test
